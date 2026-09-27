@@ -255,11 +255,13 @@
 
     /* close: sheets ask before throwing answers away */
     const closeLink = $("[data-form-close]", form);
+    /* resolves true if the form actually closed */
     async function requestClose() {
-      if (dirty && !(await confirmDiscard())) return;
+      if (dirty && !(await confirmDiscard())) return false;
       dirty = false;
       if (onClose) onClose();
       else navigate(closeLink.href);
+      return true;
     }
     closeLink.addEventListener("click", (e) => { e.preventDefault(); requestClose(); });
 
@@ -310,12 +312,21 @@
     const form = $("[data-entry-form]", dialog);
     form.classList.add("is-modal");
 
+    // One way out on phones: the sheet continues down from wherever it is
+    // (resting, or mid-drag), while the log behind grows back.
     let closing = false;
     const close = () => {
       if (closing) return;
       closing = true;
-      html.classList.remove("has-sheet");
-      dialog.close();
+      html.classList.remove("has-sheet", "is-dragging");
+      html.style.removeProperty("--sheet-drag");
+      if (wide.matches || reducedMotion.matches) { dialog.close(); return; }
+      const from = getComputedStyle(dialog).transform;
+      dialog.style.transition = "none";
+      dialog.animate(
+        [{ transform: from === "none" ? "translateY(0)" : from }, { transform: "translateY(100%)" }],
+        { duration: 380, easing: "cubic-bezier(.32, .72, 0, 1)", fill: "forwards" },
+      ).finished.then(() => dialog.close());
     };
     dialog.addEventListener("close", () => {
       formCtl?.destroy();
@@ -357,14 +368,27 @@
       const raw = e.clientY - startY;
       dy = raw > 0 ? raw : raw / 6;                       // resist dragging up
       dialog.style.transform = `translateY(${dy}px)`;
+      // the log behind follows the finger back toward full size
+      html.classList.add("is-dragging");
+      html.style.setProperty("--sheet-drag", Math.min(1, Math.max(0, dy / dialog.offsetHeight)).toFixed(3));
     });
+    const snapBack = () => {
+      html.classList.remove("is-dragging");
+      html.style.removeProperty("--sheet-drag");
+      dialog.style.transition = "";
+      dialog.style.transform = "";
+    };
     const end = async () => {
       if (!dragging) return;
       dragging = false;
       const velocity = dy / Math.max(1, performance.now() - t0);
-      dialog.style.transition = "";
-      dialog.style.transform = "";
-      if (dy > 140 || velocity > 0.6) ctl.requestClose();
+      if (dy > 140 || velocity > 0.6) {
+        // stays where the finger left it; close() carries on from there,
+        // or it springs back if she chooses to keep her answers
+        if (!(await ctl.requestClose())) snapBack();
+      } else {
+        snapBack();
+      }
     };
     handle.addEventListener("pointerup", end);
     handle.addEventListener("pointercancel", end);
