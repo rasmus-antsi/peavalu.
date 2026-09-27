@@ -273,6 +273,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   max-width: 640px;
   margin: 0 auto;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);   /* content may never widen the page */
   padding: calc(var(--safe-t) + var(--s-3)) var(--gutter) calc(var(--safe-b) + var(--s-3));
   gap: var(--s-4);
 }
@@ -583,7 +584,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   min-width: 0;
 }
 .month__name {
-  font: 400 clamp(44px, 13.5vw, 56px)/1 var(--serif);
+  font: 400 clamp(38px, 12vw, 56px)/1 var(--serif);   /* "September" + nav fit at 375px */
   letter-spacing: var(--track-display);
   text-transform: capitalize;
 }
@@ -1220,9 +1221,14 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
     background: var(--line-strong);
   }
 
+  /* Pull-down is the only way out of the phone sheet (Esc still works) */
+  .entry-modal [data-form-close] { visibility: hidden; }
+
   html.has-sheet body { background: var(--under); }
+  html.is-dragging #page { transition: none; }
   html.has-sheet #page {
-    transform: translateY(calc(var(--safe-t) + 4px)) scale(.92);
+    --d: var(--sheet-drag, 0);
+    transform: translateY(calc((var(--safe-t) + 4px) * (1 - var(--d)))) scale(calc(.92 + .08 * var(--d)));
     border-radius: var(--r-sheet);
     overflow: hidden;
     height: 100dvh;
@@ -1237,14 +1243,17 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   max-width: calc(100vw - 48px);
   overflow: visible;
 }
-@media (min-width: 960px) { .entry-modal .shell--form { height: min(760px, calc(100dvh - 48px)); } }
-.entry-modal::backdrop { background: oklch(97.4% .004 70 / 0); }
-.entry-modal[open]::backdrop {
-  background: oklch(97.4% .004 70 / .55);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+/* Desktop only: frost the log behind the modal. (iOS never blurs behind a sheet.) */
+@media (min-width: 960px) {
+  .entry-modal .shell--form { height: min(760px, calc(100dvh - 48px)); }
+  .entry-modal::backdrop { background: oklch(97.4% .004 70 / 0); }
+  .entry-modal[open]::backdrop {
+    background: oklch(97.4% .004 70 / .55);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  @starting-style { .entry-modal[open]::backdrop { background: oklch(97.4% .004 70 / 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
 }
-@starting-style { .entry-modal[open]::backdrop { background: oklch(97.4% .004 70 / 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
 
 /* --------------------------------------------------------------------------
    Sheets (delete confirm, discard, shortcuts)
