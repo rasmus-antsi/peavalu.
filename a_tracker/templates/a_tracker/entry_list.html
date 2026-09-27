@@ -34,9 +34,9 @@
         <span class="month__year">{{ month|date:"Y" }}</span>
       </h1>
       <nav class="month__nav" aria-label="Kuud">
-        <a class="icon-btn" href="?kuu={{ prev_month|date:'Y-m' }}" aria-label="Eelmine kuu"><svg class="icon"><use href="#i-left"/></svg></a>
+        <a class="icon-btn" href="?kuu={{ prev_month|date:'Y-m' }}" aria-label="Eelmine kuu" data-month="prev"><svg class="icon"><use href="#i-left"/></svg></a>
         {% if next_month %}
-          <a class="icon-btn" href="?kuu={{ next_month|date:'Y-m' }}" aria-label="Järgmine kuu"><svg class="icon"><use href="#i-right"/></svg></a>
+          <a class="icon-btn" href="?kuu={{ next_month|date:'Y-m' }}" aria-label="Järgmine kuu" data-month="next"><svg class="icon"><use href="#i-right"/></svg></a>
         {% else %}
           <span class="icon-btn is-disabled" aria-hidden="true"><svg class="icon"><use href="#i-right"/></svg></span>
         {% endif %}

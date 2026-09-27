@@ -4,16 +4,19 @@
 {% block body_class %}page-form{% endblock %}
 
 {% block app %}
-<form method="post" class="shell shell--form" novalidate data-entry-form data-busy-form data-open-step="{{ open_step }}">
+{# data-modal-src: on desktop the log fetches this block and shows it in a modal #}
+<div class="form-page" data-modal-src>
+<form method="post" action="{{ request.path }}" class="shell shell--form" novalidate
+      data-entry-form data-busy-form data-open-step="{{ open_step }}">
   {% csrf_token %}
 
   <header class="bar">
-    <a href="{% url 'entry_list' %}{% if entry %}?kuu={{ entry.date|date:'Y-m' }}{% endif %}" class="icon-btn" aria-label="Sulge" data-shortcut-cancel>
+    <a href="{% url 'entry_list' %}{% if entry %}?kuu={{ entry.date|date:'Y-m' }}{% endif %}" class="icon-btn" aria-label="Sulge" data-form-close>
       <svg class="icon"><use href="#i-close"/></svg>
     </a>
-    <h1 class="bar__title">
+    <p class="bar__title">
       {% if entry %}{{ entry.date|date:"j. F" }}{% else %}Uus peavalu{% endif %}
-    </h1>
+    </p>
     {% if entry %}
       <a href="{% url 'entry_delete' entry.pk %}" class="icon-btn icon-btn--danger" aria-label="Kustuta" data-dialog-open="delete-sheet">
         <svg class="icon"><use href="#i-trash"/></svg>
@@ -23,17 +26,20 @@
     {% endif %}
   </header>
 
-  <nav class="steps" aria-label="Sammud">
+  <nav class="progress" aria-label="Sammud">
     {% for step in form.steps %}
-      <button type="button" class="steps__tab{% if step.has_errors %} has-error{% endif %}" data-step-tab="{{ forloop.counter0 }}">{{ step.title }}</button>
+      <button type="button" class="progress__seg{% if step.has_errors %} has-error{% endif %}" data-step-tab="{{ forloop.counter0 }}" aria-label="{{ step.title }}">
+        <span class="progress__bar"></span>
+        <span class="progress__label">{{ step.title }}</span>
+      </button>
     {% endfor %}
-    <span class="steps__ink" aria-hidden="true"></span>
   </nav>
 
   <div class="track" data-track>
 
     {# 1 · Tugevus + millal #}
-    <section class="step" id="step-tugevus" data-step>
+    <section class="step" id="step-tugevus" data-step aria-labelledby="t-tugevus">
+      <h2 class="step__title" id="t-tugevus" tabindex="-1">Kui tugev on valu?</h2>
       <div class="card glass">
         <div class="pain" style="--lvl: {{ intensity_now }}" data-pain>
           <div class="pain__readout">
@@ -52,7 +58,7 @@
         </div>
 
         <div class="group">
-          <p class="group__label">Millal</p>
+          <p class="group__label">Millal algas</p>
           <div class="when">
             <div class="seg seg--auto" role="group" aria-label="Kuupäev">
               <button type="button" class="seg__opt" data-set-date="{{ today|date:'Y-m-d' }}">Täna</button>
@@ -78,10 +84,11 @@
     </section>
 
     {# 2 · Iseloom + kestus #}
-    <section class="step" id="step-iseloom" data-step>
+    <section class="step" id="step-iseloom" data-step aria-labelledby="t-iseloom">
+      <h2 class="step__title" id="t-iseloom" tabindex="-1">Milline see valu on?</h2>
       <div class="card glass">
         <div class="group">
-          <p class="group__label">Valu iseloom</p>
+          <p class="group__label">Iseloom <em>vali kõik, mis sobib</em></p>
           <div class="chips">
             <label class="chip">{{ form.is_pulsating }}<span>{{ form.is_pulsating.label }}</span></label>
             <label class="chip">{{ form.is_dull_pressing }}<span>{{ form.is_dull_pressing.label }}</span></label>
@@ -92,7 +99,7 @@
         </div>
 
         <div class="group">
-          <p class="group__label">Kestus</p>
+          <p class="group__label">Kui kaua kestis</p>
           <div class="chips chips--grid">
             {% for radio in form.duration_minutes %}
               <label class="chip chip--radio">{{ radio.tag }}<span>{% if radio.data.value == "" %}Ei tea{% else %}{{ radio.choice_label }}{% endif %}</span></label>
@@ -103,7 +110,8 @@
     </section>
 
     {# 3 · Tunnused #}
-    <section class="step" id="step-tunnused" data-step>
+    <section class="step" id="step-tunnused" data-step aria-labelledby="t-tunnused">
+      <h2 class="step__title" id="t-tunnused" tabindex="-1">Mis veel kaasnes?</h2>
       <div class="card glass">
         <div class="group">
           <p class="group__label">Kaasuvad tunnused</p>
@@ -125,7 +133,7 @@
         </label>
 
         <div class="field">
-          <label class="group__label" for="{{ form.trigger_factor.id_for_label }}">{{ form.trigger_factor.label }}</label>
+          <label class="group__label" for="{{ form.trigger_factor.id_for_label }}">Mis võis selle vallandada?</label>
           <span class="input">{{ form.trigger_factor }}</span>
           {% if recent_triggers %}
             <div class="suggest" aria-label="Varasemad">
@@ -137,11 +145,12 @@
     </section>
 
     {# 4 · Ravi #}
-    <section class="step" id="step-ravi" data-step>
+    <section class="step" id="step-ravi" data-step aria-labelledby="t-ravi">
+      <h2 class="step__title" id="t-ravi" tabindex="-1">Kas võtsid midagi?</h2>
       <div class="card glass">
         {% if recent_meds %}
           <div class="group">
-            <p class="group__label">Tavalised ravimid</p>
+            <p class="group__label">Sinu tavalised</p>
             <div class="suggest">
               {% for m in recent_meds %}
                 <button type="button" class="chip chip--med" data-fill-med="{{ m.medication_name }}" data-fill-dose="{{ m.dose|default_if_none:'' }}">
@@ -178,15 +187,23 @@
     </section>
   </div>
 
+  {% if form.non_field_errors %}<p class="notice notice--error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+
   <footer class="actions">
-    <button type="button" class="btn btn--glass" data-step-next>
+    <button type="button" class="btn btn--glass btn--back" data-step-back aria-label="Tagasi">
+      <svg class="icon"><use href="#i-left"/></svg>
+      <span>Tagasi</span>
+    </button>
+    <button type="button" class="btn btn--primary btn--next" data-step-next hidden>
       <span>Edasi</span>
       <svg class="icon"><use href="#i-right"/></svg>
+      <kbd class="kbd">↵</kbd>
     </button>
-    <button type="submit" class="btn btn--primary">
+    {# Visible by default so the form works without JS; the script shows it only on the last step #}
+    <button type="submit" class="btn btn--primary btn--save" data-step-save>
       <svg class="icon"><use href="#i-check"/></svg>
       <span>Salvesta</span>
-      <kbd class="kbd">⌘↵</kbd>
+      <kbd class="kbd">↵</kbd>
     </button>
   </footer>
 </form>
@@ -205,4 +222,5 @@
     </form>
   </dialog>
 {% endif %}
+</div>
 {% endblock %}
