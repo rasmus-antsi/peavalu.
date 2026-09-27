@@ -568,7 +568,12 @@ body::after {                    /* grain */
   transition: transform 180ms var(--ease-out), box-shadow 220ms ease;
 }
 .entry:active { transform: scale(.985); }
-.entry.is-selected, :target > .entry { box-shadow: var(--glass-shadow), 0 0 0 2px var(--ink); }
+.entry.is-selected { box-shadow: var(--glass-shadow), 0 0 0 2px var(--ink); }
+:target > .entry { animation: just-saved 2.4s var(--ease-out) .3s both; }
+@keyframes just-saved {
+  0%, 35% { box-shadow: var(--glass-shadow), 0 0 0 2px var(--rose), 0 0 0 8px rgba(212, 90, 116, .14); }
+  100%    { box-shadow: var(--glass-shadow), 0 0 0 2px transparent, 0 0 0 8px transparent; }
+}
 
 .entry__date { display: flex; flex-direction: column; align-items: center; }
 .entry__day { font-family: var(--serif); font-size: 34px; line-height: .95; font-variant-numeric: tabular-nums; }
@@ -734,41 +739,47 @@ body::after {                    /* grain */
    Entry form
    -------------------------------------------------------------------------- */
 
-.shell--form { grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px; }
+.shell--form { grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 14px; }
 
-.steps {
+/* Progress: four tappable segments, done ones filled */
+.progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.progress__seg { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; text-align: left; }
+.progress__bar {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-bottom: 1px solid var(--line);
+  height: 3px;
+  border-radius: 3px;
+  background: var(--line-strong);
+  overflow: hidden;
 }
-.steps__tab {
-  position: relative;
-  height: 40px;
-  font-size: 14px;
+.progress__bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 320ms var(--ease-out);
+}
+.progress__seg.is-done .progress__bar::after,
+.progress__seg.is-active .progress__bar::after { transform: scaleX(1); }
+.progress__label {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-3);
   transition: color 200ms ease;
 }
-.steps__tab.is-active { color: var(--ink); font-weight: 500; }
-.steps__tab.has-error::after {
-  content: "";
-  position: absolute;
-  top: 9px;
-  right: 14%;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--danger);
-}
-.steps__ink {
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 25%;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--ink);
-  transform: translateX(calc(var(--p, 0) * 100%));
+.progress__seg.is-active .progress__label { color: var(--ink); }
+.progress__seg.has-error .progress__label { color: var(--danger); }
+.progress__seg.has-error .progress__bar { background: rgba(179, 38, 62, .35); }
+
+.step__title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(34px, 9.5vw, 42px);
+  line-height: 1.02;
+  letter-spacing: -.015em;
+  margin: 4px 2px 18px;
+  outline: none;
 }
 
 /* Native horizontal swipe between steps */
@@ -796,12 +807,15 @@ body::after {                    /* grain */
 .step::-webkit-scrollbar { display: none; }
 
 .actions { display: flex; gap: 10px; }
-.actions .btn--primary { flex: 1; }
-.actions [data-step-next][hidden] { display: none; }
+.actions [hidden] { display: none !important; }
+.actions .btn--next, .actions .btn--save { flex: 1; }
+.btn--back { width: 52px; padding: 0; }
+.btn--back span { display: none; }
 
 /* Groups + fields */
 .group { display: flex; flex-direction: column; }
 .group__label { display: block; font-size: 13px; font-weight: 500; color: var(--ink-2); margin-bottom: 10px; }
+.group__label em { font-style: normal; font-weight: 400; color: var(--ink-3); margin-left: 4px; }
 .field { display: flex; flex-direction: column; min-width: 0; }
 .field-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 10px; }
 .field__error { margin-top: 8px; font-size: 13px; color: var(--danger); }
@@ -879,6 +893,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   box-shadow: inset 0 0 0 1px var(--ink);
 }
 .chip:has(input[type="checkbox"]:checked)::before { width: 14px; margin-left: -2px; }
+/* "Ei tea" is the unanswered state: selected, but quiet */
+.chip:has(input[value=""]:checked) { background: var(--wash); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .chip:has(input:focus-visible) { outline: 2px solid var(--rose); outline-offset: 2px; }
 .chip--quiet { background: var(--wash); box-shadow: none; }
 .chip--sm { min-height: 34px; padding: 0 12px; font-size: 13px; }
@@ -1040,34 +1056,49 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 }
 .pain__ticks button.is-active { color: var(--ink); font-weight: 600; }
 
-/* Form: desktop — every section visible, no stepping */
+/* Form: desktop — same step flow, presented as a centered card.
+   The log opens it in a modal; a direct visit gets the same card on the page. */
 @media (min-width: 960px) {
-  .shell--form { max-width: 1120px; grid-template-rows: auto minmax(0, 1fr) auto; }
-  .steps, [data-step-next] { display: none !important; }
-  .track {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-content: start;
-    gap: 20px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scroll-snap-type: none;
-    margin-inline: -12px;
-    padding: 4px 12px 12px;
-    scrollbar-width: thin;
+  .page-form .form-page { min-height: 100dvh; display: grid; place-items: center; padding: 32px; }
+  .shell--form {
+    width: 620px;
+    max-width: 100%;
+    height: min(760px, calc(100dvh - 64px));
+    margin: 0;
+    padding: 22px 32px 28px;
+    border-radius: 32px;
+    gap: 18px;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(28px) saturate(1.7);
+    backdrop-filter: blur(28px) saturate(1.7);
+    box-shadow: var(--glass-shadow), 0 40px 80px -40px rgba(90, 40, 52, .35);
   }
-  .step { padding: 0; overflow: visible; }
-  .step .card { height: 100%; padding: 26px 24px; }
-  .actions { justify-content: flex-end; }
-  .actions .btn--primary { flex: 0 0 auto; min-width: 200px; }
-  .bar__title { font-family: var(--serif); font-size: 30px; font-weight: 400; letter-spacing: -.01em; }
+  .shell--form .track { margin-inline: -32px; }
+  .shell--form .step { padding-inline: 32px; }
+  /* no glass-in-glass: the whole card is the surface */
+  .shell--form .step .card { background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; border-radius: 0; }
+  .step__title { font-size: 44px; margin-bottom: 26px; }
+  .btn--back { width: auto; padding: 0 20px 0 16px; }
+  .btn--back span { display: inline; }
+  .actions .btn--next, .actions .btn--save { flex: 0 0 auto; min-width: 190px; margin-left: auto; }
+  .bar__title { color: var(--ink-2); font-size: 14px; }
 }
 
-@media (min-width: 1280px) {
-  .shell--form { max-width: 1600px; }
-  .track { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-  .step .card { padding: 24px 20px; }
+/* The modal shell (desktop only; created by app.js) */
+.entry-modal {
+  width: fit-content;
+  height: fit-content;
+  max-width: calc(100vw - 48px);
+  overflow: visible;
 }
+.entry-modal .shell--form { height: min(760px, calc(100dvh - 48px)); }
+.entry-modal::backdrop { background: rgba(247, 245, 242, 0); }
+.entry-modal[open]::backdrop {
+  background: rgba(247, 245, 242, .55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+@starting-style { .entry-modal[open]::backdrop { background: rgba(247, 245, 242, 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
 
 /* --------------------------------------------------------------------------
    Sheets (delete confirm, shortcuts)

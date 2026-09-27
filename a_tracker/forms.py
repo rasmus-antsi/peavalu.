@@ -47,7 +47,7 @@ class HeadacheEntryForm(forms.ModelForm):
         widgets = {
             "date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "start_time": forms.TimeInput(format="%H:%M", attrs={"type": "time"}),
-            "dose_mg": forms.NumberInput(attrs={"inputmode": "numeric", "placeholder": "mg"}),
+            "dose_mg": forms.NumberInput(attrs={"inputmode": "numeric", "placeholder": "—"}),
             "medication_name": forms.TextInput(attrs={"placeholder": "nt Ibuprofeen", "autocomplete": "off"}),
             "other_symptoms": forms.TextInput(attrs={"placeholder": "Midagi veel?", "autocomplete": "off"}),
             "trigger_factor": forms.TextInput(attrs={"placeholder": "Uni, stress, ekraan…", "autocomplete": "off"}),
