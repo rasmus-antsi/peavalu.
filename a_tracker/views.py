@@ -30,8 +30,9 @@ def _shift_month(first_day, delta):
     return datetime.date(month_index // 12, month_index % 12 + 1, 1)
 
 
-def _month_url(date):
-    return f"{reverse('entry_list')}?kuu={date:%Y-%m}"
+def _month_url(date, entry=None):
+    anchor = f"#e-{entry.pk}" if entry else ""
+    return f"{reverse('entry_list')}?kuu={date:%Y-%m}{anchor}"
 
 
 def entry_list(request):
@@ -106,7 +107,7 @@ def entry_form(request, pk=None):
             new_entry.user = request.user
             new_entry.save()
             messages.success(request, "Muudatused salvestatud" if entry else "Peavalu kirja pandud")
-            return redirect(_month_url(new_entry.date))
+            return redirect(_month_url(new_entry.date, new_entry))
     else:
         initial = {} if entry else {"date": timezone.localdate(), "intensity": 5}
         form = HeadacheEntryForm(instance=entry, initial=initial)
