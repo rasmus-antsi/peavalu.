@@ -13,7 +13,7 @@ MEDS = {
     "tension": [("Ibuprofeen", 400), ("Paratsetamool", 500), ("Paratsetamool", 1000)],
 }
 TRIGGERS = {
-    "migraine": ["Unepuudus", "Menstruatsioon", "Ilmamuutus", "Stress", "Alkohol"],
+    "migraine": ["Unepuudus", "Ere valgus", "Ilmamuutus", "Stress", "Alkohol"],
     "tension": ["Stress", "Ekraan", "Vahele jäänud söögikord", "Kehv rüht", "Unepuudus"],
 }
 
