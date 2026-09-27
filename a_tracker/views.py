@@ -31,8 +31,9 @@ def _shift_month(first_day, delta):
 
 
 def _month_url(date, entry=None):
-    anchor = f"#e-{entry.pk}" if entry else ""
-    return f"{reverse('entry_list')}?kuu={date:%Y-%m}{anchor}"
+    # ?uus=<id> marks the entry just saved (a #fragment would be lost in htmx's redirect)
+    marker = f"&uus={entry.pk}" if entry else ""
+    return f"{reverse('entry_list')}?kuu={date:%Y-%m}{marker}"
 
 
 def entry_list(request):
@@ -66,6 +67,7 @@ def entry_list(request):
 
     return render(request, "a_tracker/entry_list.html", {
         "entries": entries,
+        "just_saved": request.GET.get("uus", ""),
         "month": month,
         "prev_month": _shift_month(month, -1),
         "next_month": _shift_month(month, 1) if _shift_month(month, 1) <= today else None,
