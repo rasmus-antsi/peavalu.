@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9bdb2"/>
+      <stop offset="1" stop-color="#c98a80"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#sky)"/>
+  <circle cx="300" cy="250" r="128" fill="#f4b8c4" filter="url(#soft)" opacity=".9"/>
+  <circle cx="300" cy="250" r="118" fill="#f4b8c4"/>
+  <rect x="96" y="148" width="180" height="216" rx="40" fill="#efeeee" opacity=".92"/>
+  <text x="186" y="290" font-family="Poppins, Helvetica, Arial, sans-serif" font-size="140" font-weight="400" fill="#1e1d1d" text-anchor="middle">P</text>
+</svg>
