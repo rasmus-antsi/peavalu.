@@ -5,22 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}Peavalu{% endblock %}</title>
 
-  <meta name="theme-color" content="#e8b9ad">
+  <meta name="theme-color" content="#f7f5f2">
+  <meta name="color-scheme" content="light">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Peavalu">
+  <meta name="format-detection" content="telephone=no">
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
   <link rel="icon" href="{% static 'icons/icon.svg' %}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/app.js' %}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
-  <div class="sky" aria-hidden="true"></div>
+  <div class="sun" aria-hidden="true"></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.8h5V7M6.5 7l.9 12.2h9.2L17.5 7"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-pill" viewBox="0 0 24 24"><path d="M12 7.5H7a4.5 4.5 0 0 0 0 9h5z" fill="currentColor" stroke="none" opacity=".3"/><rect x="2.5" y="7.5" width="19" height="9" rx="4.5"/><path d="M12 7.5v9"/></symbol>
+  </svg>
+
+  {% if messages %}
+    <div class="toasts" role="status">
+      {% for message in messages %}
+        <p class="toast"><svg class="icon"><use href="#i-check"/></svg>{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   {% block app %}{% endblock %}
+
+  {% if user.is_authenticated %}
+    <dialog class="sheet" id="keys" aria-labelledby="keys-title">
+      <div class="sheet__body">
+        <span class="sheet__grip" aria-hidden="true"></span>
+        <h2 class="sheet__title" id="keys-title">Kiirklahvid</h2>
+        <ul class="keys">
+          <li><span>Uus peavalu</span><kbd>N</kbd></li>
+          <li><span>Eelmine / järgmine kuu</span><span><kbd>←</kbd> <kbd>→</kbd></span></li>
+          <li><span>Tagasi tänasesse kuusse</span><kbd>T</kbd></li>
+          <li><span>Liigu kirjete vahel</span><span><kbd>J</kbd> <kbd>K</kbd></span></li>
+          <li><span>Ava valitud kirje</span><kbd>↵</kbd></li>
+          <li><span>Tugevus vormis</span><span><kbd>1</kbd> … <kbd>0</kbd></span></li>
+          <li><span>Salvesta</span><kbd>⌘ ↵</kbd></li>
+          <li><span>Sulge vorm</span><kbd>Esc</kbd></li>
+        </ul>
+        <div class="sheet__actions sheet__actions--single">
+          <button type="button" class="btn btn--glass" data-dialog-close>Selge</button>
+        </div>
+      </div>
+    </dialog>
+  {% endif %}
 </body>
 </html>
