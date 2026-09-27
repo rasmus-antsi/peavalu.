@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -114,32 +115,36 @@ WSGI_APPLICATION = '_core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-# SQLite, kept on a Railway volume in production. The file lives at, in order:
-# SQLITE_PATH, the attached volume, or the project folder (local dev).
-if os.environ.get('SQLITE_PATH'):
-    SQLITE_PATH = Path(os.environ['SQLITE_PATH'])
-elif os.environ.get('RAILWAY_VOLUME_MOUNT_PATH'):
-    SQLITE_PATH = Path(os.environ['RAILWAY_VOLUME_MOUNT_PATH']) / 'db.sqlite3'
-else:
-    SQLITE_PATH = BASE_DIR / 'db.sqlite3'
-
-if ON_RAILWAY and not DEBUG and SQLITE_PATH.is_relative_to(BASE_DIR):
-    # Without a volume the database would be wiped on every deploy.
-    raise ImproperlyConfigured('Attach a Railway volume (or set SQLITE_PATH) so the diary survives redeploys.')
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': SQLITE_PATH,
-        'OPTIONS': {
-            # Sensible production SQLite: WAL lets reads and a write overlap,
-            # IMMEDIATE avoids "database is locked" upgrades between workers.
-            'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;',
-            'transaction_mode': 'IMMEDIATE',
-            'timeout': 20,
-        },
+# DATABASE_URL (e.g. Railway Postgres) when it's set; otherwise SQLite, which
+# lives at SQLITE_PATH, on an attached Railway volume, or in the project folder.
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=600, conn_health_checks=True),
     }
-}
+else:
+    if os.environ.get('SQLITE_PATH'):
+        SQLITE_PATH = Path(os.environ['SQLITE_PATH'])
+    elif os.environ.get('RAILWAY_VOLUME_MOUNT_PATH'):
+        SQLITE_PATH = Path(os.environ['RAILWAY_VOLUME_MOUNT_PATH']) / 'db.sqlite3'
+    else:
+        SQLITE_PATH = BASE_DIR / 'db.sqlite3'
+
+    if ON_RAILWAY and not DEBUG and SQLITE_PATH.is_relative_to(BASE_DIR):
+        # Without a database or a volume the diary would be wiped on every deploy.
+        raise ImproperlyConfigured('Set DATABASE_URL or attach a Railway volume so the diary survives redeploys.')
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': SQLITE_PATH,
+            'OPTIONS': {
+                # WAL lets reads and a write overlap; IMMEDIATE avoids lock upgrades.
+                'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;',
+                'transaction_mode': 'IMMEDIATE',
+                'timeout': 20,
+            },
+        }
+    }
 
 
 # Password validation
