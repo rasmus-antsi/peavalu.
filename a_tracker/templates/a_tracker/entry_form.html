@@ -1,148 +1,208 @@
 {% extends "base.html" %}
 
-{% block title %}{% if entry %}Muuda{% else %}Uus peavalu{% endif %} · Peavalu{% endblock %}
+{% block title %}{% if entry %}Muuda kirjet{% else %}Uus peavalu{% endif %} · Peavalu{% endblock %}
 {% block body_class %}page-form{% endblock %}
 
 {% block app %}
-<form method="post" class="app wizard" novalidate>
+<form method="post" class="shell shell--form" novalidate data-entry-form data-busy-form data-open-step="{{ open_step }}">
   {% csrf_token %}
-  {% for step in form.steps %}
-    <input type="radio" name="_step" value="{{ step.slug }}" id="step-{{ step.slug }}" class="wizard__state"
-           {% if step.slug == open_step %}checked{% endif %}>
-  {% endfor %}
 
-  <header class="topbar">
-    <a href="{% url 'entry_list' %}" class="round-btn" aria-label="Tagasi">
-      <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
+  <header class="bar">
+    <a href="{% url 'entry_list' %}{% if entry %}?kuu={{ entry.date|date:'Y-m' }}{% endif %}" class="icon-btn" aria-label="Sulge" data-shortcut-cancel>
+      <svg class="icon"><use href="#i-close"/></svg>
     </a>
-    <h1 class="topbar__title">{% if entry %}{{ entry.date|date:"j. F" }}{% else %}Uus peavalu{% endif %}</h1>
+    <h1 class="bar__title">
+      {% if entry %}{{ entry.date|date:"j. F" }}{% else %}Uus peavalu{% endif %}
+    </h1>
     {% if entry %}
-      <a href="{% url 'entry_delete' entry.pk %}" class="round-btn round-btn--soft" aria-label="Kustuta">
-        <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>
+      <a href="{% url 'entry_delete' entry.pk %}" class="icon-btn icon-btn--danger" aria-label="Kustuta" data-dialog-open="delete-sheet">
+        <svg class="icon"><use href="#i-trash"/></svg>
       </a>
     {% else %}
-      <span class="round-btn round-btn--ghost" aria-hidden="true"></span>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
     {% endif %}
   </header>
 
-  <nav class="tabs" aria-label="Sammud">
+  <nav class="steps" aria-label="Sammud">
     {% for step in form.steps %}
-      <label for="step-{{ step.slug }}" class="tabs__tab tabs__tab--{{ step.slug }}{% if step.has_errors %} has-error{% endif %}">{{ step.title }}</label>
+      <button type="button" class="steps__tab{% if step.has_errors %} has-error{% endif %}" data-step-tab="{{ forloop.counter0 }}">{{ step.title }}</button>
     {% endfor %}
+    <span class="steps__ink" aria-hidden="true"></span>
   </nav>
 
-  {% if form.non_field_errors %}<p class="form-error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+  <div class="track" data-track>
 
-  <div class="scroll wizard__panels">
-
-    {# 1 · Millal #}
-    <section class="panel panel--millal glass">
-      <div class="field-row">
-        <label class="field">
-          <span class="field__label">{{ form.date.label }}</span>
-          {{ form.date }}
-          {% for err in form.date.errors %}<span class="field__error">{{ err }}</span>{% endfor %}
-        </label>
-        <label class="field">
-          <span class="field__label">{{ form.start_time.label }} <em>valikuline</em></span>
-          {{ form.start_time }}
-          {% for err in form.start_time.errors %}<span class="field__error">{{ err }}</span>{% endfor %}
-        </label>
-      </div>
-
-      <fieldset class="field">
-        <legend class="field__label">{{ form.duration_minutes.label }}</legend>
-        <div class="chips chips--grid4">
-          {% for radio in form.duration_minutes %}
-            <label class="chip">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
-          {% endfor %}
+    {# 1 · Tugevus + millal #}
+    <section class="step" id="step-tugevus" data-step>
+      <div class="card glass">
+        <div class="pain" style="--lvl: {{ intensity_now }}" data-pain>
+          <div class="pain__readout">
+            <span class="pain__num" data-pain-num>{{ intensity_now }}</span>
+            <span class="pain__word" data-pain-word>{{ intensity_word }}</span>
+          </div>
+          <label class="pain__slider">
+            <span class="sr-only">Tugevus 1–10</span>
+            {{ form.intensity }}
+          </label>
+          <div class="pain__ticks" aria-hidden="true">
+            {% for i in "0123456789" %}<button type="button" tabindex="-1" data-pain-set="{{ forloop.counter }}">{{ forloop.counter }}</button>{% endfor %}
+          </div>
+          {% if form.intensity.errors %}<p class="field__error">Vali tugevus 1–10.</p>{% endif %}
+          {{ intensity_words|json_script:"intensity-words" }}
         </div>
-      </fieldset>
+
+        <div class="group">
+          <p class="group__label">Millal</p>
+          <div class="when">
+            <div class="seg seg--auto" role="group" aria-label="Kuupäev">
+              <button type="button" class="seg__opt" data-set-date="{{ today|date:'Y-m-d' }}">Täna</button>
+              <button type="button" class="seg__opt" data-set-date="{{ yesterday|date:'Y-m-d' }}">Eile</button>
+              <label class="seg__opt seg__opt--input">
+                <span class="sr-only">Kuupäev</span>
+                {{ form.date }}
+              </label>
+            </div>
+            <div class="time">
+              <label class="input input--icon">
+                <svg class="icon"><use href="#i-clock"/></svg>
+                <span class="sr-only">Algusaeg</span>
+                {{ form.start_time }}
+              </label>
+              <button type="button" class="chip chip--quiet" data-set-now>Praegu</button>
+            </div>
+          </div>
+          {% for err in form.date.errors %}<p class="field__error">{{ err }}</p>{% endfor %}
+          {% for err in form.start_time.errors %}<p class="field__error">{{ err }}</p>{% endfor %}
+        </div>
+      </div>
     </section>
 
-    {# 2 · Valu #}
-    <section class="panel panel--valu glass">
-      <fieldset class="field">
-        <legend class="field__label">{{ form.intensity.label }} <em>1 – 10</em></legend>
-        <div class="chips chips--scale">
-          {% for radio in form.intensity %}
-            <label class="chip chip--level" style="--lvl: {{ radio.choice_label }}">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
-          {% endfor %}
+    {# 2 · Iseloom + kestus #}
+    <section class="step" id="step-iseloom" data-step>
+      <div class="card glass">
+        <div class="group">
+          <p class="group__label">Valu iseloom</p>
+          <div class="chips">
+            <label class="chip">{{ form.is_pulsating }}<span>{{ form.is_pulsating.label }}</span></label>
+            <label class="chip">{{ form.is_dull_pressing }}<span>{{ form.is_dull_pressing.label }}</span></label>
+            <label class="chip">{{ form.is_unilateral }}<span>{{ form.is_unilateral.label }}</span></label>
+            <label class="chip">{{ form.is_bilateral }}<span>{{ form.is_bilateral.label }}</span></label>
+            <label class="chip">{{ form.is_occipital }}<span>{{ form.is_occipital.label }}</span></label>
+          </div>
         </div>
-        {% for err in form.intensity.errors %}<span class="field__error">Vali tugevus.</span>{% endfor %}
-      </fieldset>
 
-      <fieldset class="field">
-        <legend class="field__label">Valu iseloom</legend>
-        <div class="chips chips--wrap">
-          <label class="chip">{{ form.is_pulsating }}<span>{{ form.is_pulsating.label }}</span></label>
-          <label class="chip">{{ form.is_dull_pressing }}<span>{{ form.is_dull_pressing.label }}</span></label>
-          <label class="chip">{{ form.is_unilateral }}<span>{{ form.is_unilateral.label }}</span></label>
-          <label class="chip">{{ form.is_bilateral }}<span>{{ form.is_bilateral.label }}</span></label>
-          <label class="chip">{{ form.is_occipital }}<span>{{ form.is_occipital.label }}</span></label>
+        <div class="group">
+          <p class="group__label">Kestus</p>
+          <div class="chips chips--grid">
+            {% for radio in form.duration_minutes %}
+              <label class="chip chip--radio">{{ radio.tag }}<span>{% if radio.data.value == "" %}Ei tea{% else %}{{ radio.choice_label }}{% endif %}</span></label>
+            {% endfor %}
+          </div>
         </div>
-      </fieldset>
+      </div>
     </section>
 
     {# 3 · Tunnused #}
-    <section class="panel panel--tunnused glass">
-      <fieldset class="field">
-        <legend class="field__label">Kaasuvad tunnused</legend>
-        <div class="chips chips--grid2">
-          <label class="chip">{{ form.nausea }}<span>{{ form.nausea.label }}</span></label>
-          <label class="chip">{{ form.vomiting }}<span>{{ form.vomiting.label }}</span></label>
-          <label class="chip">{{ form.photophobia }}<span>{{ form.photophobia.label }}</span></label>
-          <label class="chip">{{ form.phonophobia }}<span>{{ form.phonophobia.label }}</span></label>
-          <label class="chip">{{ form.exertion_intolerance }}<span>{{ form.exertion_intolerance.label }}</span></label>
-          <label class="chip">{{ form.visual_disturbance }}<span>{{ form.visual_disturbance.label }}</span></label>
-          <label class="chip">{{ form.speech_disturbance }}<span>{{ form.speech_disturbance.label }}</span></label>
-          <label class="chip">{{ form.sensory_disturbance }}<span>{{ form.sensory_disturbance.label }}</span></label>
+    <section class="step" id="step-tunnused" data-step>
+      <div class="card glass">
+        <div class="group">
+          <p class="group__label">Kaasuvad tunnused</p>
+          <div class="chips">
+            <label class="chip">{{ form.nausea }}<span>{{ form.nausea.label }}</span></label>
+            <label class="chip">{{ form.vomiting }}<span>{{ form.vomiting.label }}</span></label>
+            <label class="chip">{{ form.photophobia }}<span>{{ form.photophobia.label }}</span></label>
+            <label class="chip">{{ form.phonophobia }}<span>{{ form.phonophobia.label }}</span></label>
+            <label class="chip">{{ form.exertion_intolerance }}<span>{{ form.exertion_intolerance.label }}</span></label>
+            <label class="chip">{{ form.visual_disturbance }}<span>{{ form.visual_disturbance.label }}</span></label>
+            <label class="chip">{{ form.speech_disturbance }}<span>{{ form.speech_disturbance.label }}</span></label>
+            <label class="chip">{{ form.sensory_disturbance }}<span>{{ form.sensory_disturbance.label }}</span></label>
+          </div>
         </div>
-      </fieldset>
 
-      <label class="field">
-        <span class="field__label">{{ form.other_symptoms.label }}</span>
-        {{ form.other_symptoms }}
-      </label>
-      <label class="field">
-        <span class="field__label">{{ form.trigger_factor.label }}</span>
-        {{ form.trigger_factor }}
-      </label>
+        <label class="field">
+          <span class="group__label">{{ form.other_symptoms.label }}</span>
+          <span class="input">{{ form.other_symptoms }}</span>
+        </label>
+
+        <div class="field">
+          <label class="group__label" for="{{ form.trigger_factor.id_for_label }}">{{ form.trigger_factor.label }}</label>
+          <span class="input">{{ form.trigger_factor }}</span>
+          {% if recent_triggers %}
+            <div class="suggest" aria-label="Varasemad">
+              {% for t in recent_triggers %}<button type="button" class="chip chip--quiet chip--sm" data-fill-trigger="{{ t }}">{{ t }}</button>{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
     </section>
 
     {# 4 · Ravi #}
-    <section class="panel panel--ravi glass">
-      <div class="field-row field-row--wide">
-        <label class="field">
-          <span class="field__label">{{ form.medication_name.label }}</span>
-          {{ form.medication_name }}
-        </label>
-        <label class="field">
-          <span class="field__label">{{ form.dose_mg.label }} <em>mg</em></span>
-          {{ form.dose_mg }}
-          {% for err in form.dose_mg.errors %}<span class="field__error">{{ err }}</span>{% endfor %}
-        </label>
-      </div>
+    <section class="step" id="step-ravi" data-step>
+      <div class="card glass">
+        {% if recent_meds %}
+          <div class="group">
+            <p class="group__label">Tavalised ravimid</p>
+            <div class="suggest">
+              {% for m in recent_meds %}
+                <button type="button" class="chip chip--med" data-fill-med="{{ m.medication_name }}" data-fill-dose="{{ m.dose|default_if_none:'' }}">
+                  <svg class="icon"><use href="#i-pill"/></svg>
+                  <span>{{ m.medication_name }}</span>{% if m.dose %}<small>{{ m.dose }} mg</small>{% endif %}
+                </button>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
 
-      <fieldset class="field">
-        <legend class="field__label">{{ form.was_effective.label }}</legend>
-        <div class="chips chips--grid3">
-          {% for radio in form.was_effective %}
-            <label class="chip">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
-          {% endfor %}
+        <div class="field-row">
+          <label class="field">
+            <span class="group__label">{{ form.medication_name.label }}</span>
+            <span class="input">{{ form.medication_name }}</span>
+          </label>
+          <label class="field field--dose">
+            <span class="group__label">{{ form.dose_mg.label }}</span>
+            <span class="input input--suffix">{{ form.dose_mg }}<span class="input__suffix">mg</span></span>
+          </label>
         </div>
-      </fieldset>
+        {% for err in form.dose_mg.errors %}<p class="field__error">{{ err }}</p>{% endfor %}
+
+        <div class="group">
+          <p class="group__label">Kas ravi aitas?</p>
+          <div class="seg seg--3" role="radiogroup" aria-label="{{ form.was_effective.label }}">
+            {% for radio in form.was_effective %}
+              <label class="seg__opt">{{ radio.tag }}<span>{% if radio.data.value == "" %}Ei tea{% else %}{{ radio.choice_label }}{% endif %}</span></label>
+            {% endfor %}
+            <span class="seg__thumb" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 
-  <footer class="bottombar bottombar--split">
-    <label for="step-valu" class="ghost-pill next next--millal">Edasi</label>
-    <label for="step-tunnused" class="ghost-pill next next--valu">Edasi</label>
-    <label for="step-ravi" class="ghost-pill next next--tunnused">Edasi</label>
-    <button type="submit" class="cta">
-      <span class="cta__label">Salvesta</span>
-      <span class="cta__icon"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></span>
+  <footer class="actions">
+    <button type="button" class="btn btn--glass" data-step-next>
+      <span>Edasi</span>
+      <svg class="icon"><use href="#i-right"/></svg>
+    </button>
+    <button type="submit" class="btn btn--primary">
+      <svg class="icon"><use href="#i-check"/></svg>
+      <span>Salvesta</span>
+      <kbd class="kbd">⌘↵</kbd>
     </button>
   </footer>
 </form>
+
+{% if entry %}
+  <dialog class="sheet" id="delete-sheet" aria-labelledby="delete-title">
+    <form method="post" action="{% url 'entry_delete' entry.pk %}" class="sheet__body">
+      {% csrf_token %}
+      <span class="sheet__grip" aria-hidden="true"></span>
+      <h2 class="sheet__title" id="delete-title">Kustutan kirje?</h2>
+      <p class="sheet__text">{{ entry.date|date:"j. F Y" }}, tugevus {{ entry.intensity }}/10. Seda ei saa tagasi võtta.</p>
+      <div class="sheet__actions">
+        <button type="button" class="btn btn--glass" data-dialog-close>Jäta alles</button>
+        <button type="submit" class="btn btn--danger">Kustuta</button>
+      </div>
+    </form>
+  </dialog>
+{% endif %}
 {% endblock %}
