@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}{% if entry %}Muuda{% else %}Uus peavalu{% endif %} · Peavalu{% endblock %}
+{% block body_class %}page-form{% endblock %}
+
+{% block app %}
+<form method="post" class="app wizard" novalidate>
+  {% csrf_token %}
+  {% for step in form.steps %}
+    <input type="radio" name="_step" value="{{ step.slug }}" id="step-{{ step.slug }}" class="wizard__state"
+           {% if step.slug == open_step %}checked{% endif %}>
+  {% endfor %}
+
+  <header class="topbar">
+    <a href="{% url 'entry_list' %}" class="round-btn" aria-label="Tagasi">
+      <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
+    </a>
+    <h1 class="topbar__title">{% if entry %}{{ entry.date|date:"j. F" }}{% else %}Uus peavalu{% endif %}</h1>
+    {% if entry %}
+      <a href="{% url 'entry_delete' entry.pk %}" class="round-btn round-btn--soft" aria-label="Kustuta">
+        <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>
+      </a>
+    {% else %}
+      <span class="round-btn round-btn--ghost" aria-hidden="true"></span>
+    {% endif %}
+  </header>
+
+  <nav class="tabs" aria-label="Sammud">
+    {% for step in form.steps %}
+      <label for="step-{{ step.slug }}" class="tabs__tab tabs__tab--{{ step.slug }}{% if step.has_errors %} has-error{% endif %}">{{ step.title }}</label>
+    {% endfor %}
+  </nav>
+
+  {% if form.non_field_errors %}<p class="form-error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+
+  <div class="scroll wizard__panels">
+
+    {# 1 · Millal #}
+    <section class="panel panel--millal">
+      <div class="field-row">
+        <label class="field">
+          <span class="field__label">{{ form.date.label }}</span>
+          {{ form.date }}
+          {% for err in form.date.errors %}<span class="field__error">{{ err }}</span>{% endfor %}
+        </label>
+        <label class="field">
+          <span class="field__label">{{ form.start_time.label }} <em>valikuline</em></span>
+          {{ form.start_time }}
+          {% for err in form.start_time.errors %}<span class="field__error">{{ err }}</span>{% endfor %}
+        </label>
+      </div>
+
+      <fieldset class="field">
+        <legend class="field__label">{{ form.duration_minutes.label }}</legend>
+        <div class="chips chips--grid4">
+          {% for radio in form.duration_minutes %}
+            <label class="chip">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    </section>
+
+    {# 2 · Valu #}
+    <section class="panel panel--valu">
+      <fieldset class="field">
+        <legend class="field__label">{{ form.intensity.label }} <em>1 – 10</em></legend>
+        <div class="chips chips--scale">
+          {% for radio in form.intensity %}
+            <label class="chip chip--level" style="--lvl: {{ radio.choice_label }}">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+          {% endfor %}
+        </div>
+        {% for err in form.intensity.errors %}<span class="field__error">Vali tugevus.</span>{% endfor %}
+      </fieldset>
+
+      <fieldset class="field">
+        <legend class="field__label">Valu iseloom</legend>
+        <div class="chips chips--wrap">
+          <label class="chip">{{ form.is_pulsating }}<span>{{ form.is_pulsating.label }}</span></label>
+          <label class="chip">{{ form.is_dull_pressing }}<span>{{ form.is_dull_pressing.label }}</span></label>
+          <label class="chip">{{ form.is_unilateral }}<span>{{ form.is_unilateral.label }}</span></label>
+          <label class="chip">{{ form.is_bilateral }}<span>{{ form.is_bilateral.label }}</span></label>
+          <label class="chip">{{ form.is_occipital }}<span>{{ form.is_occipital.label }}</span></label>
+        </div>
+      </fieldset>
+    </section>
+
+    {# 3 · Tunnused #}
+    <section class="panel panel--tunnused">
+      <fieldset class="field">
+        <legend class="field__label">Kaasuvad tunnused</legend>
+        <div class="chips chips--grid2">
+          <label class="chip">{{ form.nausea }}<span>{{ form.nausea.label }}</span></label>
+          <label class="chip">{{ form.vomiting }}<span>{{ form.vomiting.label }}</span></label>
+          <label class="chip">{{ form.photophobia }}<span>{{ form.photophobia.label }}</span></label>
+          <label class="chip">{{ form.phonophobia }}<span>{{ form.phonophobia.label }}</span></label>
+          <label class="chip">{{ form.exertion_intolerance }}<span>{{ form.exertion_intolerance.label }}</span></label>
+          <label class="chip">{{ form.visual_disturbance }}<span>{{ form.visual_disturbance.label }}</span></label>
+          <label class="chip">{{ form.speech_disturbance }}<span>{{ form.speech_disturbance.label }}</span></label>
+          <label class="chip">{{ form.sensory_disturbance }}<span>{{ form.sensory_disturbance.label }}</span></label>
+        </div>
+      </fieldset>
+
+      <label class="field">
+        <span class="field__label">{{ form.other_symptoms.label }}</span>
+        {{ form.other_symptoms }}
+      </label>
+      <label class="field">
+        <span class="field__label">{{ form.trigger_factor.label }}</span>
+        {{ form.trigger_factor }}
+      </label>
+    </section>
+
+    {# 4 · Ravi #}
+    <section class="panel panel--ravi">
+      <div class="field-row field-row--wide">
+        <label class="field">
+          <span class="field__label">{{ form.medication_name.label }}</span>
+          {{ form.medication_name }}
+        </label>
+        <label class="field">
+          <span class="field__label">{{ form.dose_mg.label }} <em>mg</em></span>
+          {{ form.dose_mg }}
+          {% for err in form.dose_mg.errors %}<span class="field__error">{{ err }}</span>{% endfor %}
+        </label>
+      </div>
+
+      <fieldset class="field">
+        <legend class="field__label">{{ form.was_effective.label }}</legend>
+        <div class="chips chips--grid3">
+          {% for radio in form.was_effective %}
+            <label class="chip">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    </section>
+  </div>
+
+  <footer class="bottombar bottombar--split">
+    <label for="step-valu" class="ghost-pill next next--millal">Edasi</label>
+    <label for="step-tunnused" class="ghost-pill next next--valu">Edasi</label>
+    <label for="step-ravi" class="ghost-pill next next--tunnused">Edasi</label>
+    <button type="submit" class="cta">
+      <span class="cta__label">Salvesta</span>
+      <span class="cta__icon"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></span>
+    </button>
+  </footer>
+</form>
+{% endblock %}
