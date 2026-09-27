@@ -50,7 +50,7 @@ class EntryTests(TestCase):
             "nausea": "on",
             "was_effective": "true",
         })
-        self.assertRedirects(response, reverse("entry_list"))
+        self.assertRedirects(response, f"{reverse('entry_list')}?kuu=2026-09")
         entry = HeadacheEntry.objects.get()
         self.assertEqual(entry.user, self.user)
         self.assertEqual(entry.intensity, 7)
@@ -68,7 +68,7 @@ class EntryTests(TestCase):
     def test_intensity_out_of_range_is_rejected(self):
         response = self.client.post(reverse("entry_create"), {"date": "2026-09-27", "intensity": "11"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["open_step"], "valu")
+        self.assertEqual(response.context["open_step"], "tugevus")
         self.assertFalse(HeadacheEntry.objects.exists())
 
     def test_edit_keeps_nonstandard_duration(self):
@@ -77,6 +77,25 @@ class EntryTests(TestCase):
         self.assertContains(response, "1 h 35 min")
         self.assertContains(response, 'value="95"')
         self.assertContains(response, 'value="false" id="id_was_effective_2" checked')
+
+    def test_month_view_shows_only_that_month(self):
+        self.make_entry(self.user, medication_name="Septembri ravim")
+        HeadacheEntry.objects.create(user=self.user, date=datetime.date(2026, 8, 15), intensity=8, medication_name="Augusti ravim")
+        response = self.client.get(reverse("entry_list") + "?kuu=2026-08")
+        self.assertContains(response, "Augusti ravim")
+        self.assertNotContains(response, "Septembri ravim")
+        self.assertEqual(response.context["headache_days"], 1)
+
+    def test_bad_month_param_falls_back_to_current_month(self):
+        response = self.client.get(reverse("entry_list") + "?kuu=2026-13")
+        self.assertEqual(response.status_code, 200)
+
+    def test_form_suggests_her_frequent_medications(self):
+        self.make_entry(self.user, medication_name="Sumatriptaan", dose_mg=50)
+        self.make_entry(self.other, medication_name="Teise ravim")
+        response = self.client.get(reverse("entry_create"))
+        names = [m["medication_name"] for m in response.context["recent_meds"]]
+        self.assertEqual(names, ["Sumatriptaan"])
 
     def test_delete_entry(self):
         entry = self.make_entry(self.user)

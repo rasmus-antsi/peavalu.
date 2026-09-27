@@ -18,11 +18,11 @@ EFFECTIVE_CHOICES = [("", "—"), ("true", "Aitas"), ("false", "Ei aidanud")]
 
 
 class HeadacheEntryForm(forms.ModelForm):
-    intensity = forms.TypedChoiceField(
+    intensity = forms.IntegerField(
         label="Tugevus",
-        choices=[(i, str(i)) for i in range(1, 11)],
-        coerce=int,
-        widget=forms.RadioSelect,
+        min_value=1,
+        max_value=10,
+        widget=forms.NumberInput(attrs={"type": "range", "min": 1, "max": 10, "step": 1}),
     )
     duration_minutes = forms.TypedChoiceField(
         label="Kestus",
@@ -54,9 +54,10 @@ class HeadacheEntryForm(forms.ModelForm):
         }
 
     # Wizard steps; the template renders one panel per step.
+    # Intensity + date first: a complete entry is "slide, save".
     STEPS = [
-        ("millal", "Millal", ["date", "start_time", "duration_minutes"]),
-        ("valu", "Valu", ["intensity", *HeadacheEntry.CHARACTER_FIELDS]),
+        ("tugevus", "Tugevus", ["intensity", "date", "start_time"]),
+        ("iseloom", "Iseloom", [*HeadacheEntry.CHARACTER_FIELDS, "duration_minutes"]),
         ("tunnused", "Tunnused", [*HeadacheEntry.SYMPTOM_FIELDS, "other_symptoms", "trigger_factor"]),
         ("ravi", "Ravi", ["medication_name", "dose_mg", "was_effective"]),
     ]

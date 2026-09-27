@@ -74,6 +74,10 @@ class HeadacheEntry(models.Model):
         return self._labels(self.SYMPTOM_FIELDS)
 
     @property
+    def weekday_letter(self):
+        return "ETKNRLP"[self.date.weekday()]
+
+    @property
     def duration_display(self):
         if self.duration_minutes is None:
             return ""
