@@ -63,7 +63,7 @@
       <div class="rhythm__bars">
         {% for d in days %}
           <span class="rhythm__day{% if d.peak %} has-pain{% endif %}{% if d.is_today %} is-today{% endif %}{% if d.is_future %} is-future{% endif %}"
-                {% if d.peak %}style="--lvl: {{ d.peak }}" title="{{ d.day }}. — {{ d.peak }}/10"{% endif %}></span>
+                {% if d.peak %}data-lvl="{{ d.peak }}" title="{{ d.day }}. — {{ d.peak }}/10"{% endif %}></span>
         {% endfor %}
       </div>
       <div class="rhythm__scale"><span>1.</span><span>{{ days|length }}.</span></div>
@@ -74,7 +74,7 @@
       {% for _ in leading_blanks %}<span></span>{% endfor %}
       {% for d in days %}
         {% if d.entry_id %}
-          <a class="cal__day has-pain{% if d.peak >= 6 %} is-strong{% endif %}{% if d.is_today %} is-today{% endif %}" href="#e-{{ d.entry_id }}" style="--lvl: {{ d.peak }}">{{ d.day }}</a>
+          <a class="cal__day has-pain{% if d.is_today %} is-today{% endif %}" href="#e-{{ d.entry_id }}" data-lvl="{{ d.peak }}">{{ d.day }}</a>
         {% else %}
           <span class="cal__day{% if d.is_today %} is-today{% endif %}{% if d.is_future %} is-future{% endif %}">{{ d.day }}</span>
         {% endif %}
@@ -122,7 +122,7 @@
                 {% endif %}
               </div>
 
-              <span class="level{% if e.intensity >= 6 %} is-strong{% endif %}" style="--lvl: {{ e.intensity }}" aria-label="Tugevus {{ e.intensity }} / 10">{{ e.intensity }}</span>
+              <span class="level" data-lvl="{{ e.intensity }}" aria-label="Tugevus {{ e.intensity }} / 10">{{ e.intensity }}</span>
             </a>
           </li>
         {% endfor %}
