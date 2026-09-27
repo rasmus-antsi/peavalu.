@@ -101,38 +101,25 @@ python manage.py test
 
 ## Deploying to Railway
 
-The repo is ready for [Railway](https://railway.com) as it is. `railway.json` sets the start command and healthcheck, and the settings pick up Railway's own variables.
+There's no Procfile or config file. Railway's builder recognises a Django project and runs `migrate` and then gunicorn by itself.
 
-1. **Create a service from the GitHub repo.** Railpack detects Python (version pinned in `.python-version`) and installs `requirements.txt`.
-2. **Attach a volume** to the service, at any mount path such as `/data`. The SQLite database lives there. Without a volume the app refuses to start, because the diary would otherwise be wiped on every deploy.
-3. **Set one variable:** `DJANGO_SECRET_KEY`. Generate a value with:
-   ```bash
-   python -c "import secrets; print(secrets.token_urlsafe(50))"
-   ```
-4. **Generate a domain** under the service's Networking settings, then deploy.
-5. **Create the accounts** once it's running:
-   ```bash
-   railway ssh
-   python manage.py createsuperuser
-   ```
-   Then add the everyday (non-admin) account from `/admin` → Users.
+1. Create a service from the GitHub repo.
+2. Attach a volume (e.g. at `/data`). The database lives there.
+3. Add the variable `DJANGO_SECRET_KEY` (any long random string).
+4. Generate a domain and deploy.
 
-Each deploy runs migrations, collects static files and starts gunicorn. The migrations run in the start command rather than as a pre-deploy step, because Railway only mounts volumes when the container starts. `/healthz` is the healthcheck; it's public and checks that the database answers.
+To create the login, run `railway ssh`, then `python manage.py createsuperuser`. Add further accounts from `/admin`.
 
-The settings also handle the rest automatically:
+Everything else is read from Railway automatically:
+- Debug is off.
+- The domain is allowed.
+- The database goes on the volume.
+- Static files are served by WhiteNoise.
+- HTTPS is enforced.
 
-| | |
-| --- | --- |
-| Debug | Off on Railway, on locally. Override with `DJANGO_DEBUG`. |
-| Hosts and CSRF | `RAILWAY_PUBLIC_DOMAIN` and Railway's healthcheck host are allowed automatically. Add custom domains with `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`. |
-| Database | SQLite at `$RAILWAY_VOLUME_MOUNT_PATH/db.sqlite3`, in WAL mode. Override with `SQLITE_PATH`. |
-| Static files | Served by WhiteNoise: hashed, compressed, cached for a year. |
-| HTTPS | Redirect to HTTPS, HSTS, and secure cookies behind Railway's proxy. |
-| Logs | Errors go to stdout, which appears in Railway's log view. |
+If the volume or the secret key is missing, the app refuses to start rather than risk losing data.
 
-It isn't tied to Railway: any host that can run gunicorn with a persistent disk works the same way, using `SQLITE_PATH`, `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`.
-
-Back up the volume now and then (Railway can snapshot it); it holds everything.
+Elsewhere, set `DJANGO_DEBUG=0`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS` and `SQLITE_PATH` yourself.
 
 ## Privacy
 
