@@ -22,25 +22,51 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
+# Railway sets RAILWAY_ENVIRONMENT_NAME on every deploy; locally it's absent.
+ON_RAILWAY = 'RAILWAY_ENVIRONMENT_NAME' in os.environ
+
+
+def env_list(name):
+    return [v.strip() for v in os.environ.get(name, '').split(',') if v.strip()]
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
     'django-insecure-q4yfu@h$gzpm-j-3_7fhcwpyz5n6c8p^y!a-i#)^3-3=^8+31i',
 )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
+# Debug is on locally and off on Railway unless DJANGO_DEBUG says otherwise.
+DEBUG = os.environ.get('DJANGO_DEBUG', '0' if ON_RAILWAY else '1') == '1'
 
-ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h]
-CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if o]
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS')
+CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
+
+if ON_RAILWAY:
+    # Railway's generated domain (or custom domain) and its healthcheck host
+    if public_domain := os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
+        ALLOWED_HOSTS.append(public_domain)
+        CSRF_TRUSTED_ORIGINS.append(f'https://{public_domain}')
+    ALLOWED_HOSTS.append('healthcheck.railway.app')
 
 if not DEBUG:
     # The fallback key above is public (it's in the repo): never run production on it.
     if SECRET_KEY.startswith('django-insecure-'):
         raise ImproperlyConfigured('Set DJANGO_SECRET_KEY when DJANGO_DEBUG=0.')
+
+    # Railway terminates TLS and forwards the original scheme.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r'^healthz/?$']   # healthchecks come in over plain HTTP
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    SILENCED_SYSTEM_CHECKS = [
+        'mail.E001',       # the app never sends email (no sign-up, no password reset)
+        'security.W005',   # HSTS includeSubDomains: not ours to decide on *.up.railway.app
+        'security.W021',   # HSTS preload: same; opt in once on a custom domain
+    ]
 
 
 # Application definition
@@ -58,6 +84,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -90,10 +117,30 @@ WSGI_APPLICATION = '_core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# SQLite, kept on a Railway volume in production. The file lives at, in order:
+# SQLITE_PATH, the attached volume, or the project folder (local dev).
+if os.environ.get('SQLITE_PATH'):
+    SQLITE_PATH = Path(os.environ['SQLITE_PATH'])
+elif os.environ.get('RAILWAY_VOLUME_MOUNT_PATH'):
+    SQLITE_PATH = Path(os.environ['RAILWAY_VOLUME_MOUNT_PATH']) / 'db.sqlite3'
+else:
+    SQLITE_PATH = BASE_DIR / 'db.sqlite3'
+
+if ON_RAILWAY and not DEBUG and SQLITE_PATH.is_relative_to(BASE_DIR):
+    # Without a volume the database would be wiped on every deploy.
+    raise ImproperlyConfigured('Attach a Railway volume (or set SQLITE_PATH) so the diary survives redeploys.')
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.environ.get('SQLITE_PATH', BASE_DIR / 'db.sqlite3'),
+        'NAME': SQLITE_PATH,
+        'OPTIONS': {
+            # Sensible production SQLite: WAL lets reads and a write overlap,
+            # IMMEDIATE avoids "database is locked" upgrades between workers.
+            'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;',
+            'transaction_mode': 'IMMEDIATE',
+            'timeout': 20,
+        },
     }
 }
 
@@ -136,6 +183,16 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# WhiteNoise serves static files from gunicorn: hashed filenames + compression
+# in production, plain files while developing.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage' if DEBUG
+        else 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+
 
 # Auth
 # Everything requires login (LoginRequiredMiddleware); the session lasts a year
@@ -145,6 +202,16 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'entry_list'
 LOGOUT_REDIRECT_URL = 'login'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 365
+
+
+# Logging: errors to stdout, where Railway collects them
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'root': {'handlers': ['console'], 'level': 'WARNING'},
+}
 
 
 # Email
