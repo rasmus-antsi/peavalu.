@@ -16,14 +16,18 @@ A quiet, private headache diary that feels like a native iPhone app, built with 
 
 ## Why I built this
 
-I built this for my girlfriend, who gets headaches. A diary only helps if it actually gets filled in, and the moment you need to write a headache down is exactly the moment you least want to deal with an app. Popular trackers like Migraine Buddy put around eight steps between you and "done".
+My girlfriend's doctor asked her to keep track of her headaches on paper: when each one started, how strong it was, what came with it, and what she took for it.
 
-So I made her one of her own. The rules were simple:
+Paper doesn't work very well for that. The notebook is at home when the headache starts at work. You mean to write it down later, and then you forget, or you only remember roughly when it began. A diary only helps the doctor if it's complete, and a paper one rarely is.
+
+Her phone, though, is with her 24/7. So I turned the doctor's paper diary into something that lives there: the same questions, answered in a few taps, the moment it happens.
+
+The rules were simple:
 
 - **It has to work while it hurts.** Big tap targets, no typing required, and the most important answer (how strong is it?) comes first. Everything after that is optional.
 - **It has to be hers.** One small server, a login, and no analytics or third-party accounts. Her entries are visible to her and nobody else.
 - **It has to be something she wants to open.** Warm and calm rather than medical. It should feel like a well-made iPhone app, not a form.
-- **It should help at the doctor's.** Months of entries, with patterns you can see at a glance and, soon, an export she can hand over.
+- **It has to give the doctor what they asked for.** Every field on the doctor's list is there, months of entries show patterns at a glance, and a PDF export she can hand over is coming next.
 
 It's a small, personal project. I'm sharing the code because the approach (a modern, app-like experience with almost no tooling) might be useful to someone building something similar for a person they care about.
 
