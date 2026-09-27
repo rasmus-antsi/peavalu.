@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Logi sisse · Peavalu{% endblock %}
+{% block body_class %}page-login{% endblock %}
+
+{% block app %}
+<main class="app app--center">
+  <form method="post" class="glass login" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <div class="login__top">
+      <span class="brand">Peavalu_</span>
+      <span class="muted">päevik</span>
+    </div>
+
+    <h1 class="login__title">Logi sisse</h1>
+
+    {% if form.errors %}
+      <p class="form-error">Vale kasutajanimi või parool.</p>
+    {% endif %}
+
+    <label class="pill-field">
+      <span class="pill-field__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+      </span>
+      <input type="text" name="username" placeholder="kasutajanimi" autocomplete="username"
+             autocapitalize="none" autocorrect="off" spellcheck="false"
+             value="{{ form.username.value|default_if_none:'' }}" required>
+    </label>
+
+    <label class="pill-field">
+      <span class="pill-field__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2"/></svg>
+      </span>
+      <input type="password" name="password" placeholder="parool" autocomplete="current-password" required>
+    </label>
+
+    <div class="login__foot">
+      <p class="fine">Sinu päevik on privaatne. Kirjeid näed ainult sina.</p>
+      <button type="submit" class="go" aria-label="Logi sisse">
+        <span class="go__tail"></span>
+        <span class="go__head"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
+      </button>
+    </div>
+  </form>
+
+  <section class="ink-card">
+    <p class="ink-card__title">Peavalu&nbsp;päevik</p>
+    <p class="ink-card__sub">Märgi üles. Märka mustreid.</p>
+  </section>
+</main>
+{% endblock %}
