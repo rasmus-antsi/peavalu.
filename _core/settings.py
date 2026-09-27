@@ -42,12 +42,10 @@ DEBUG = os.environ.get('DJANGO_DEBUG', '0' if ON_RAILWAY else '1') == '1'
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS')
 CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
 
-if ON_RAILWAY:
-    # Railway's generated domain (or custom domain) and its healthcheck host
-    if public_domain := os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
-        ALLOWED_HOSTS.append(public_domain)
-        CSRF_TRUSTED_ORIGINS.append(f'https://{public_domain}')
-    ALLOWED_HOSTS.append('healthcheck.railway.app')
+# Railway's generated (or custom) domain, so there's nothing to configure by hand
+if public_domain := os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
+    ALLOWED_HOSTS.append(public_domain)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{public_domain}')
 
 if not DEBUG:
     # The fallback key above is public (it's in the repo): never run production on it.
@@ -57,7 +55,6 @@ if not DEBUG:
     # Railway terminates TLS and forwards the original scheme.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
-    SECURE_REDIRECT_EXEMPT = [r'^healthz/?$']   # healthchecks come in over plain HTTP
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -181,17 +178,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# WhiteNoise serves static files from gunicorn: hashed filenames + compression
-# in production, plain files while developing.
-STORAGES = {
-    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
-    'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage' if DEBUG
-        else 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
+# WhiteNoise serves static files straight from the app folders, so a deploy
+# needs no collectstatic step (Railpack's default start command doesn't run one).
+WHITENOISE_USE_FINDERS = True
 
 
 # Auth
