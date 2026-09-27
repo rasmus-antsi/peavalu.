@@ -50,8 +50,8 @@ class EntryTests(TestCase):
             "nausea": "on",
             "was_effective": "true",
         })
-        self.assertRedirects(response, f"{reverse('entry_list')}?kuu=2026-09")
         entry = HeadacheEntry.objects.get()
+        self.assertRedirects(response, f"{reverse('entry_list')}?kuu=2026-09#e-{entry.pk}")
         self.assertEqual(entry.user, self.user)
         self.assertEqual(entry.intensity, 7)
         self.assertEqual(entry.duration_minutes, 120)
