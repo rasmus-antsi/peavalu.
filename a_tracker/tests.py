@@ -113,3 +113,10 @@ class SeedDemoTests(TestCase):
         entries = HeadacheEntry.objects.filter(user__username="proov")
         self.assertTrue(entries.exists())
         self.assertTrue(all(1 <= e.intensity <= 10 for e in entries))
+
+
+class HealthcheckTests(TestCase):
+    def test_healthz_is_public_and_ok(self):
+        response = self.client.get("/healthz")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"ok")
