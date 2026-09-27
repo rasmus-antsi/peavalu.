@@ -43,6 +43,8 @@
 
   --ease-out: cubic-bezier(.23, 1, .32, 1);
   --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  /* gentle spring (~4% overshoot) for things that "land": chips, steps */
+  --spring: linear(0, .034 2.2%, .137 4.6%, .524 11.3%, .749 16.1%, .905 21.3%, .995 26.8%, 1.037 32.3%, 1.048 36.2%, 1.043 41.5%, 1.012 55.3%, .999 69.6%, 1);
 }
 
 @view-transition { navigation: auto; }
@@ -118,17 +120,41 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   view-transition-name: sun;
 }
 
-body::before {                   /* halo so the sun's edge doesn't feel pasted on */
+/* #page owns the whole backdrop so an open sheet can scale it back, iOS-style */
+#page {
+  position: relative;
+  z-index: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  transform-origin: 50% 0;
+  transition: transform 460ms var(--ease-drawer), border-radius 460ms var(--ease-drawer), filter 460ms ease;
+}
+
+#page::before {                  /* halo so the sun's edge doesn't feel pasted on */
   content: "";
   position: fixed;
-  z-index: -3;
+  z-index: -4;
   inset: 0;
   background:
     radial-gradient(60vmax 40vmax at 100% 0%, rgba(243, 185, 197, .28), transparent 70%),
     radial-gradient(50vmax 40vmax at 0% 100%, rgba(246, 215, 196, .35), transparent 70%);
 }
 
-body::after {                    /* grain */
+/* Dot grid: gives the glass something to blur everywhere, fades out toward
+   the middle so it reads as texture, not wallpaper */
+.dots {
+  position: fixed;
+  z-index: -3;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at center, rgba(26, 22, 20, .16) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-position: 11px 11px;
+  -webkit-mask-image: radial-gradient(120% 90% at 0% 100%, #000 10%, transparent 60%), radial-gradient(90% 70% at 100% 0%, #000 10%, transparent 65%);
+  mask-image: radial-gradient(120% 90% at 0% 100%, #000 10%, transparent 60%), radial-gradient(90% 70% at 100% 0%, #000 10%, transparent 65%);
+}
+
+#page::after {                   /* grain */
   content: "";
   position: fixed;
   z-index: -1;
@@ -281,7 +307,22 @@ body::after {                    /* grain */
   .kbd { display: inline-block; }
 }
 
-.btn[aria-busy="true"] { opacity: .6; pointer-events: none; }
+.btn[aria-busy="true"] { pointer-events: none; }
+.btn[aria-busy="true"] .icon { opacity: 0; }
+.btn[aria-busy="true"]::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin-left: -2px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .3);
+  border-top-color: #fff;
+  animation: spin 700ms linear infinite;
+}
+.btn--save { position: relative; }
+.btn--save[aria-busy="true"]::before { left: 22px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* --------------------------------------------------------------------------
    Toasts
@@ -569,7 +610,7 @@ body::after {                    /* grain */
 }
 .entry:active { transform: scale(.985); }
 .entry.is-selected { box-shadow: var(--glass-shadow), 0 0 0 2px var(--ink); }
-:target > .entry { animation: just-saved 2.4s var(--ease-out) .3s both; }
+.entry.is-new, :target > .entry { animation: just-saved 2.4s var(--ease-out) .35s both; }
 @keyframes just-saved {
   0%, 35% { box-shadow: var(--glass-shadow), 0 0 0 2px var(--rose), 0 0 0 8px rgba(212, 90, 116, .14); }
   100%    { box-shadow: var(--glass-shadow), 0 0 0 2px transparent, 0 0 0 8px transparent; }
@@ -758,7 +799,7 @@ body::after {                    /* grain */
   background: var(--ink);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 320ms var(--ease-out);
+  transition: transform 520ms var(--spring);
 }
 .progress__seg.is-done .progress__bar::after,
 .progress__seg.is-active .progress__bar::after { transform: scaleX(1); }
@@ -771,6 +812,16 @@ body::after {                    /* grain */
 .progress__seg.is-active .progress__label { color: var(--ink); }
 .progress__seg.has-error .progress__label { color: var(--danger); }
 .progress__seg.has-error .progress__bar { background: rgba(179, 38, 62, .35); }
+
+.step.is-entering .step__title,
+.step.is-entering .card > * {
+  animation: rise 520ms var(--ease-out) both;
+}
+.step.is-entering .card > :nth-child(1) { animation-delay: 50ms; }
+.step.is-entering .card > :nth-child(2) { animation-delay: 100ms; }
+.step.is-entering .card > :nth-child(3) { animation-delay: 150ms; }
+.step.is-entering .card > :nth-child(4) { animation-delay: 200ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); filter: blur(2px); } }
 
 .step__title {
   font-family: var(--serif);
@@ -893,6 +944,10 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   box-shadow: inset 0 0 0 1px var(--ink);
 }
 .chip:has(input[type="checkbox"]:checked)::before { width: 14px; margin-left: -2px; }
+.is-ready .chip:has(input:checked),
+.is-ready .chip.is-active { animation: pop 380ms var(--spring); }
+@keyframes pop { 0% { transform: scale(.92); } }
+
 /* "Ei tea" is the unanswered state: selected, but quiet */
 .chip:has(input[value=""]:checked) { background: var(--wash); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .chip:has(input:focus-visible) { outline: 2px solid var(--rose); outline-offset: 2px; }
@@ -993,8 +1048,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   min-width: 1.1ch;
 }
 .pain__word { font-size: 17px; font-weight: 500; color: var(--ink-2); }
-.pain__num.is-bump { animation: bump 220ms var(--ease-out); }
-@keyframes bump { from { transform: translateY(6px); opacity: .4; } }
+.pain__num, .pain__word { display: inline-block; }
+.pain__readout { overflow: hidden; padding-top: 6px; }
 
 .pain__slider { display: block; padding: 0 2px; }
 .pain__slider input[type="range"] {
@@ -1084,14 +1139,66 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   .bar__title { color: var(--ink-2); font-size: 14px; }
 }
 
-/* The modal shell (desktop only; created by app.js) */
+/* Entry sheet (created by app.js from the log).
+   Phone: an iOS page sheet — slides up, the log behind scales back with
+   rounded corners on a dark ground, drag the header down to dismiss. */
+@media (max-width: 959px) {
+  dialog.entry-modal {
+    inset: auto 0 0;
+    margin: 0;
+    opacity: 1;
+    width: 100%;
+    max-width: none;
+    height: calc(100dvh - var(--safe-t) - 12px);
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at center, rgba(26, 22, 20, .09) 1px, transparent 1.4px) 11px 11px / 22px 22px,
+      var(--bg);
+    box-shadow: 0 -10px 40px -10px rgba(0, 0, 0, .25);
+    transform: translateY(100%);
+    transition: transform 460ms var(--ease-drawer), overlay 460ms allow-discrete, display 460ms allow-discrete;
+  }
+  dialog.entry-modal[open] { transform: none; }
+  @starting-style { dialog.entry-modal[open] { transform: translateY(100%); } }
+  .entry-modal::backdrop { background: rgba(0, 0, 0, 0); }
+  .entry-modal[open]::backdrop { background: rgba(0, 0, 0, .12); }
+
+  .entry-modal .shell--form {
+    height: 100%;
+    padding-top: 16px;
+  }
+  .entry-modal .bar { touch-action: none; cursor: grab; }
+  .entry-modal .bar::before {       /* grabber */
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 38px;
+    height: 5px;
+    margin-left: -19px;
+    border-radius: 3px;
+    background: var(--line-strong);
+  }
+
+  html.has-sheet body { background: #0e0c0b; }
+  html.has-sheet #page {
+    transform: translateY(calc(var(--safe-t) + 4px)) scale(.92);
+    border-radius: 14px;
+    overflow: hidden;
+    height: 100dvh;
+    filter: brightness(.92);
+  }
+}
+
+/* The modal shell (desktop) */
 .entry-modal {
   width: fit-content;
   height: fit-content;
   max-width: calc(100vw - 48px);
   overflow: visible;
 }
-.entry-modal .shell--form { height: min(760px, calc(100dvh - 48px)); }
+@media (min-width: 960px) { .entry-modal .shell--form { height: min(760px, calc(100dvh - 48px)); } }
 .entry-modal::backdrop { background: rgba(247, 245, 242, 0); }
 .entry-modal[open]::backdrop {
   background: rgba(247, 245, 242, .55);
@@ -1180,6 +1287,24 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 /* --------------------------------------------------------------------------
    Page transitions
    -------------------------------------------------------------------------- */
+
+.log { view-transition-name: log; }
+.month__title { view-transition-name: month; }
+html[data-nav="next"]::view-transition-old(log),
+html[data-nav="next"]::view-transition-old(month) { animation: slide-out-l 220ms var(--ease-out) both; }
+html[data-nav="next"]::view-transition-new(log),
+html[data-nav="next"]::view-transition-new(month) { animation: slide-in-r 380ms var(--ease-out) both; }
+html[data-nav="prev"]::view-transition-old(log),
+html[data-nav="prev"]::view-transition-old(month) { animation: slide-out-r 220ms var(--ease-out) both; }
+html[data-nav="prev"]::view-transition-new(log),
+html[data-nav="prev"]::view-transition-new(month) { animation: slide-in-l 380ms var(--ease-out) both; }
+html[data-nav="next"]::view-transition-new(root), html[data-nav="prev"]::view-transition-new(root) { animation: vt-fade 240ms ease both; }
+::view-transition-group(log), ::view-transition-group(month) { animation-duration: 380ms; animation-timing-function: var(--ease-out); }
+@keyframes slide-out-l { to { opacity: 0; transform: translateX(-28px); } }
+@keyframes slide-out-r { to { opacity: 0; transform: translateX(28px); } }
+@keyframes slide-in-r { from { opacity: 0; transform: translateX(36px); } }
+@keyframes slide-in-l { from { opacity: 0; transform: translateX(-36px); } }
+@keyframes vt-fade { from { opacity: 0; } }
 
 ::view-transition-old(root) { animation: vt-out 160ms ease both; }
 ::view-transition-new(root) { animation: vt-in 280ms var(--ease-out) both; }
