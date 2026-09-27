@@ -235,7 +235,16 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   background: rgba(255, 255, 255, .18);
   cursor: pointer;
 }
-.bottombar .ghost-pill { height: 52px; padding: 0 24px; font-size: 15px; }
+.bottombar .ghost-pill {
+  height: 52px;
+  padding: 0 24px;
+  font-size: 15px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, .55);
+  border-color: rgba(255, 255, 255, .7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
 
 .round-btn {
   width: 44px;
@@ -503,8 +512,8 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   background: var(--danger);
 }
 
-.panel { display: none; flex-direction: column; gap: 18px; padding-top: 6px; }
-.panel.glass { padding: 18px; }
+.panel { display: none; flex-direction: column; gap: 18px; }
+.panel.glass { padding: 18px 14px; border-radius: var(--r-xl); }
 
 /* Show the active step, highlight its tab, and pick the matching "Edasi" */
 .next { display: none; }
@@ -579,6 +588,7 @@ legend.field__label { margin-bottom: 8px; }
 .chip input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .chip--level span {
+  background: color-mix(in oklab, var(--field-strong), #c9707f calc(var(--lvl) * 3.5%));
   aspect-ratio: 1;
   min-height: 0;
   padding: 0;
