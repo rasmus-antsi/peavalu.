@@ -20,9 +20,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <meta name="htmx-config" content='{"globalViewTransitions": true, "scrollIntoViewOnBoost": false, "historyCacheSize": 0, "defaultSwapStyle": "innerHTML"}'>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js" integrity="sha384-2OatzQy1H+Zd/IIrjr1TcuDGqLXeHhbooAyJY1KdQMKnr4LZ22k31GBLdYKHmVjg" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/htmx-ext-preload@2.1.2/dist/preload.min.js" integrity="sha384-PRIcY6hH1Y5784C76/Y8SqLyTanY9rnI3B8F3+hKZFNED55hsEqMJyqWhp95lgfk" crossorigin="anonymous" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
-<body class="{% block body_class %}{% endblock %}">
+{# hx-boost: links and forms load in place with a view transition; preload fetches on hover/touch #}
+<body hx-boost="true" hx-ext="preload" preload="mouseover">
+<div id="page" class="page {% block body_class %}{% endblock %}">
+  <div class="dots" aria-hidden="true"></div>
   <div class="sun" aria-hidden="true"></div>
 
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -69,6 +75,19 @@
         </div>
       </div>
     </dialog>
+
+    <dialog class="sheet sheet--alert" id="discard-sheet" aria-labelledby="discard-title">
+      <div class="sheet__body">
+        <span class="sheet__grip" aria-hidden="true"></span>
+        <h2 class="sheet__title" id="discard-title">Loobud muudatustest?</h2>
+        <p class="sheet__text">Täidetud vastused lähevad kaotsi.</p>
+        <div class="sheet__actions">
+          <button type="button" class="btn btn--glass" data-dialog-close>Jätka täitmist</button>
+          <button type="button" class="btn btn--danger" data-discard-confirm>Loobu</button>
+        </div>
+      </div>
+    </dialog>
   {% endif %}
+</div>
 </body>
 </html>

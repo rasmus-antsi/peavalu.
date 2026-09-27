@@ -11,14 +11,14 @@
   {% csrf_token %}
 
   <header class="bar">
-    <a href="{% url 'entry_list' %}{% if entry %}?kuu={{ entry.date|date:'Y-m' }}{% endif %}" class="icon-btn" aria-label="Sulge" data-form-close>
+    <a href="{% url 'entry_list' %}{% if entry %}?kuu={{ entry.date|date:'Y-m' }}{% endif %}" class="icon-btn" aria-label="Sulge" data-form-close hx-boost="false">
       <svg class="icon"><use href="#i-close"/></svg>
     </a>
     <p class="bar__title">
       {% if entry %}{{ entry.date|date:"j. F" }}{% else %}Uus peavalu{% endif %}
     </p>
     {% if entry %}
-      <a href="{% url 'entry_delete' entry.pk %}" class="icon-btn icon-btn--danger" aria-label="Kustuta" data-dialog-open="delete-sheet">
+      <a href="{% url 'entry_delete' entry.pk %}" class="icon-btn icon-btn--danger" aria-label="Kustuta" data-dialog-open="delete-sheet" hx-boost="false">
         <svg class="icon"><use href="#i-trash"/></svg>
       </a>
     {% else %}
