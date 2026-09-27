@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Kustuta · Peavalu{% endblock %}
+
+{% block app %}
+<main class="app app--center">
+  <form method="post" class="glass confirm">
+    {% csrf_token %}
+    <p class="muted">Kustuta kirje?</p>
+    <p class="confirm__date">{{ entry.date|date:"j. F Y" }}</p>
+    <p class="confirm__meta">Tugevus {{ entry.intensity }}/10{% if entry.duration_display %} · {{ entry.duration_display }}{% endif %}</p>
+    <div class="confirm__actions">
+      <a href="{% url 'entry_update' entry.pk %}" class="ghost-pill">Tühista</a>
+      <button type="submit" class="cta cta--danger">
+        <span class="cta__label">Kustuta</span>
+      </button>
+    </div>
+  </form>
+</main>
+{% endblock %}

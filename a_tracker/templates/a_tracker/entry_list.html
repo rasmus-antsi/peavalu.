@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block body_class %}page-list{% endblock %}
+
+{% block app %}
+<div class="app">
+  <header class="topbar">
+    <span class="brand">Peavalu_</span>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="ghost-pill">Logi välja</button>
+    </form>
+  </header>
+
+  <section class="month-card">
+    <div class="month-card__panel">
+      <p class="month-card__month">{{ today|date:"F" }}</p>
+      <p class="month-card__year">{{ today|date:"Y" }}</p>
+      <p class="month-card__today">{{ today|date:"l j." }}</p>
+    </div>
+    <div class="month-card__stats">
+      <div class="blob" aria-hidden="true"></div>
+      <p class="stat"><span class="stat__num">{{ month_days }}</span><span class="stat__label">{% if month_days == 1 %}peavalu päev{% else %}peavalu päeva{% endif %}</span></p>
+      <p class="stat"><span class="stat__num">{% if month_avg %}{{ month_avg|floatformat:1 }}{% else %}–{% endif %}</span><span class="stat__label">keskmine tugevus</span></p>
+    </div>
+  </section>
+
+  <main class="scroll" id="log">
+    {% regroup entries by date|date:"F Y" as months %}
+    {% for month in months %}
+      <h2 class="group-label">{{ month.grouper }}</h2>
+      <ul class="entries">
+        {% for e in month.list %}
+          <li>
+            <a class="entry" href="{% url 'entry_update' e.pk %}">
+              <div class="entry__date">
+                <span class="entry__day">{{ e.date|date:"j" }}</span>
+                <span class="entry__weekday">{{ e.date|date:"D" }}</span>
+              </div>
+              <div class="entry__body">
+                <p class="entry__meta">
+                  {% if e.start_time %}{{ e.start_time|time:"H:i" }}{% endif %}
+                  {% if e.start_time and e.duration_display %} · {% endif %}
+                  {% if e.duration_display %}{{ e.duration_display }}{% endif %}
+                  {% if not e.start_time and not e.duration_display %}Peavalu{% endif %}
+                </p>
+                {% with tags=e.character_labels|add:e.symptom_labels %}
+                  {% if tags %}
+                    <p class="entry__tags">{{ tags|join:", " }}</p>
+                  {% endif %}
+                {% endwith %}
+                {% if e.medication_name %}
+                  <p class="entry__med">
+                    {{ e.medication_name }}{% if e.dose_mg %} {{ e.dose_mg }} mg{% endif %}
+                    {% if e.was_effective is True %}<span class="tag tag--ok">aitas</span>{% elif e.was_effective is False %}<span class="tag">ei aidanud</span>{% endif %}
+                  </p>
+                {% endif %}
+              </div>
+              <span class="level{% if e.intensity >= 6 %} level--strong{% endif %}" style="--lvl: {{ e.intensity }}">{{ e.intensity }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% empty %}
+      <div class="empty">
+        <p class="empty__title">Siin on veel vaikne.</p>
+        <p class="muted">Kui pea valutab, vajuta allpool „Lisa peavalu“.</p>
+      </div>
+    {% endfor %}
+  </main>
+
+  <footer class="bottombar">
+    <a class="cta" href="{% url 'entry_create' %}">
+      <span class="cta__label">Lisa peavalu</span>
+      <span class="cta__icon"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+    </a>
+  </footer>
+</div>
+{% endblock %}
