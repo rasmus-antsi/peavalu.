@@ -3,77 +3,136 @@
 {% block body_class %}page-list{% endblock %}
 
 {% block app %}
-<div class="app">
-  <header class="topbar">
-    <span class="brand">Peavalu_</span>
-    <form method="post" action="{% url 'logout' %}">
-      {% csrf_token %}
-      <button type="submit" class="ghost-pill">Logi välja</button>
-    </form>
+<div class="shell shell--list">
+  <header class="bar">
+    <a class="wordmark" href="{% url 'entry_list' %}">Peavalu<span aria-hidden="true">.</span></a>
+
+    <a class="btn btn--primary add" href="{% url 'entry_create' %}">
+      <svg class="icon"><use href="#i-plus"/></svg>
+      <span>Lisa peavalu</span>
+      <kbd class="kbd">N</kbd>
+    </a>
+
+    <details class="menu">
+      <summary class="icon-btn" aria-label="Menüü">{{ user.get_username|slice:":1"|upper }}</summary>
+      <div class="menu__panel glass">
+        <p class="menu__who">{{ user.get_username }}</p>
+        <button type="button" class="menu__item only-fine" data-dialog-open="keys">Kiirklahvid <kbd>?</kbd></button>
+        {% if user.is_staff %}<a class="menu__item" href="{% url 'admin:index' %}">Andmete haldus</a>{% endif %}
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="menu__item">Logi välja</button>
+        </form>
+      </div>
+    </details>
   </header>
 
-  <section class="month-card">
-    <div class="month-card__panel">
-      <p class="month-card__month">{{ today|date:"F" }}</p>
-      <p class="month-card__year">{{ today|date:"Y" }}</p>
-      <p class="month-card__today">{{ today|date:"l j." }}</p>
+  <aside class="overview">
+    <div class="month">
+      <h1 class="month__title">
+        <span class="month__name">{{ month|date:"F" }}</span>
+        <span class="month__year">{{ month|date:"Y" }}</span>
+      </h1>
+      <nav class="month__nav" aria-label="Kuud">
+        <a class="icon-btn" href="?kuu={{ prev_month|date:'Y-m' }}" aria-label="Eelmine kuu"><svg class="icon"><use href="#i-left"/></svg></a>
+        {% if next_month %}
+          <a class="icon-btn" href="?kuu={{ next_month|date:'Y-m' }}" aria-label="Järgmine kuu"><svg class="icon"><use href="#i-right"/></svg></a>
+        {% else %}
+          <span class="icon-btn is-disabled" aria-hidden="true"><svg class="icon"><use href="#i-right"/></svg></span>
+        {% endif %}
+      </nav>
     </div>
-    <div class="month-card__stats">
-      <div class="blob" aria-hidden="true"></div>
-      <p class="stat"><span class="stat__num">{{ month_days }}</span><span class="stat__label">{% if month_days == 1 %}peavalu päev{% else %}peavalu päeva{% endif %}</span></p>
-      <p class="stat"><span class="stat__num">{% if month_avg %}{{ month_avg|floatformat:1 }}{% else %}–{% endif %}</span><span class="stat__label">keskmine tugevus</span></p>
-    </div>
-  </section>
 
-  <main class="scroll" id="log">
-    {% regroup entries by date|date:"F Y" as months %}
-    {% for month in months %}
-      <h2 class="group-label">{{ month.grouper }}</h2>
-      <ul class="entries">
-        {% for e in month.list %}
-          <li>
-            <a class="entry" href="{% url 'entry_update' e.pk %}">
+    <dl class="stats">
+      <div class="stat">
+        <dt>Peavalu päevi</dt>
+        <dd>{{ headache_days }}</dd>
+      </div>
+      <div class="stat">
+        <dt>Keskmine</dt>
+        <dd>{% if avg_intensity %}{{ avg_intensity|floatformat:1 }}{% else %}—{% endif %}</dd>
+      </div>
+      <div class="stat">
+        <dt>Ravi aitas</dt>
+        <dd>{% if med_rated %}{{ med_helped }}<small>/{{ med_rated }}</small>{% else %}—{% endif %}</dd>
+      </div>
+    </dl>
+
+    {# Month rhythm: one bar per day, height = strongest headache that day #}
+    <div class="rhythm" aria-label="Kuu ülevaade">
+      <div class="rhythm__bars">
+        {% for d in days %}
+          <span class="rhythm__day{% if d.peak %} has-pain{% endif %}{% if d.is_today %} is-today{% endif %}{% if d.is_future %} is-future{% endif %}"
+                {% if d.peak %}style="--lvl: {{ d.peak }}" title="{{ d.day }}. — {{ d.peak }}/10"{% endif %}></span>
+        {% endfor %}
+      </div>
+      <div class="rhythm__scale"><span>1.</span><span>{{ days|length }}.</span></div>
+    </div>
+
+    <div class="cal" aria-label="Kalender">
+      {% for w in "ETKNRLP" %}<span class="cal__wd">{{ w }}</span>{% endfor %}
+      {% for _ in leading_blanks %}<span></span>{% endfor %}
+      {% for d in days %}
+        {% if d.entry_id %}
+          <a class="cal__day has-pain{% if d.peak >= 6 %} is-strong{% endif %}{% if d.is_today %} is-today{% endif %}" href="#e-{{ d.entry_id }}" style="--lvl: {{ d.peak }}">{{ d.day }}</a>
+        {% else %}
+          <span class="cal__day{% if d.is_today %} is-today{% endif %}{% if d.is_future %} is-future{% endif %}">{{ d.day }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if top_symptoms %}
+      <div class="top">
+        <p class="eyebrow">Sagedasemad tunnused</p>
+        <ul class="top__list">
+          {% for label, count in top_symptoms %}
+            <li><span>{{ label }}</span><span class="top__count">{{ count }}×</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </aside>
+
+  <main class="log scroll">
+    {% if entries %}
+      <ol class="entries">
+        {% for e in entries %}
+          <li id="e-{{ e.pk }}">
+            <a class="entry glass" href="{% url 'entry_update' e.pk %}">
               <div class="entry__date">
                 <span class="entry__day">{{ e.date|date:"j" }}</span>
-                <span class="entry__weekday">{{ e.date|date:"D" }}</span>
+                <span class="entry__wd" title="{{ e.date|date:'l' }}">{{ e.weekday_letter }}</span>
               </div>
+
               <div class="entry__body">
                 <p class="entry__meta">
-                  {% if e.start_time %}{{ e.start_time|time:"H:i" }}{% endif %}
-                  {% if e.start_time and e.duration_display %} · {% endif %}
-                  {% if e.duration_display %}{{ e.duration_display }}{% endif %}
-                  {% if not e.start_time and not e.duration_display %}Peavalu{% endif %}
+                  {% if e.start_time %}<span>{{ e.start_time|time:"H:i" }}</span>{% endif %}
+                  {% if e.duration_display %}<span>{{ e.duration_display }}</span>{% endif %}
+                  {% if not e.start_time and not e.duration_display %}<span class="is-quiet">Aeg märkimata</span>{% endif %}
                 </p>
                 {% with tags=e.character_labels|add:e.symptom_labels %}
-                  {% if tags %}
-                    <p class="entry__tags">{{ tags|join:", " }}</p>
-                  {% endif %}
+                  {% if tags %}<p class="entry__tags">{{ tags|join:" · " }}</p>{% endif %}
                 {% endwith %}
                 {% if e.medication_name %}
                   <p class="entry__med">
-                    {{ e.medication_name }}{% if e.dose_mg %} {{ e.dose_mg }} mg{% endif %}
-                    {% if e.was_effective is True %}<span class="tag tag--ok">aitas</span>{% elif e.was_effective is False %}<span class="tag">ei aidanud</span>{% endif %}
+                    <svg class="icon"><use href="#i-pill"/></svg>
+                    <span>{{ e.medication_name }}{% if e.dose_mg %} {{ e.dose_mg }} mg{% endif %}</span>
+                    {% if e.was_effective is True %}<span class="badge badge--ok">aitas</span>{% elif e.was_effective is False %}<span class="badge">ei aidanud</span>{% endif %}
                   </p>
                 {% endif %}
               </div>
-              <span class="level{% if e.intensity >= 6 %} level--strong{% endif %}" style="--lvl: {{ e.intensity }}">{{ e.intensity }}</span>
+
+              <span class="level{% if e.intensity >= 6 %} is-strong{% endif %}" style="--lvl: {{ e.intensity }}" aria-label="Tugevus {{ e.intensity }} / 10">{{ e.intensity }}</span>
             </a>
           </li>
         {% endfor %}
-      </ul>
-    {% empty %}
+      </ol>
+    {% else %}
       <div class="empty">
-        <p class="empty__title">Siin on veel vaikne.</p>
-        <p class="muted">Kui pea valutab, vajuta allpool „Lisa peavalu“.</p>
+        <p class="empty__title">{% if is_current_month %}Selles kuus on seni vaikne.{% else %}Selles kuus kirjeid pole.{% endif %}</p>
+        <p class="empty__text">Kui pea valutab, vajuta „Lisa peavalu“. Piisab tugevusest, ülejäänu võid lisada hiljem.</p>
       </div>
-    {% endfor %}
+    {% endif %}
   </main>
-
-  <footer class="bottombar">
-    <a class="cta" href="{% url 'entry_create' %}">
-      <span class="cta__label">Lisa peavalu</span>
-      <span class="cta__icon"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
-    </a>
-  </footer>
 </div>
 {% endblock %}
