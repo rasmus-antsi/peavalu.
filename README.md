@@ -59,7 +59,7 @@ There is no frontend build step at all. No npm, no bundler, no framework.
 
 | Layer | What's used |
 | --- | --- |
-| Server | Django 6.1, SQLite, server-rendered templates, gunicorn + WhiteNoise in production |
+| Server | Django 6.1, server-rendered templates; SQLite locally, Postgres (or SQLite) in production; gunicorn + WhiteNoise |
 | Navigation | [htmx](https://htmx.org) 2 (`hx-boost` + preload) with native View Transitions |
 | Styles | One hand-written CSS file (`static/css/app.css`) |
 | Behaviour | One small vanilla JS file (`static/js/app.js`) |
@@ -103,23 +103,21 @@ python manage.py test
 
 There's no Procfile or config file. Railway's builder recognises a Django project and runs `migrate` and then gunicorn by itself.
 
-1. Create a service from the GitHub repo.
-2. Attach a volume (e.g. at `/data`). The database lives there.
-3. Add the variable `DJANGO_SECRET_KEY` (any long random string).
-4. Generate a domain and deploy.
+1. Create a service from the GitHub repo, and add a Postgres database to the project.
+2. In the service's Variables → Raw Editor, paste [`.env.example`](.env.example). Fill in `DJANGO_SECRET_KEY`, and set `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
+3. Generate a domain and deploy.
 
 To create the login, run `railway ssh`, then `python manage.py createsuperuser`. Add further accounts from `/admin`.
 
 Everything else is read from Railway automatically:
 - Debug is off.
 - The domain is allowed.
-- The database goes on the volume.
 - Static files are served by WhiteNoise.
 - HTTPS is enforced.
 
-If the volume or the secret key is missing, the app refuses to start rather than risk losing data.
+Without `DATABASE_URL`, the app uses SQLite on an attached volume instead. It refuses to start if there's neither, or no secret key, rather than risk losing data.
 
-Elsewhere, set `DJANGO_DEBUG=0`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS` and `SQLITE_PATH` yourself.
+Elsewhere, the same variables apply, plus `DJANGO_DEBUG=0` and your hostnames.
 
 ## Privacy
 
