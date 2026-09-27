@@ -41,7 +41,7 @@
     <section class="step" id="step-tugevus" data-step aria-labelledby="t-tugevus">
       <h2 class="step__title" id="t-tugevus" tabindex="-1">Kui tugev on valu?</h2>
       <div class="card glass">
-        <div class="pain" style="--lvl: {{ intensity_now }}" data-pain>
+        <div class="pain" data-lvl="{{ intensity_now }}" data-pain>
           <div class="pain__readout">
             <span class="pain__num" data-pain-num>{{ intensity_now }}</span>
             <span class="pain__word" data-pain-word>{{ intensity_word }}</span>

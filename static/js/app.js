@@ -163,7 +163,7 @@
         num.textContent = v;
         word.textContent = words[v];
       }
-      pain.style.setProperty("--lvl", v);
+      pain.dataset.lvl = v;
       range.setAttribute("aria-valuetext", `${v} – ${words[v]}`);
       ticks.forEach((t) => t.classList.toggle("is-active", +t.dataset.painSet === v));
     }
