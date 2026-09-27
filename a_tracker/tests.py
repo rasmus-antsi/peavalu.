@@ -101,3 +101,15 @@ class EntryTests(TestCase):
         entry = self.make_entry(self.user)
         self.client.post(reverse("entry_delete", args=[entry.pk]))
         self.assertFalse(HeadacheEntry.objects.exists())
+
+
+class SeedDemoTests(TestCase):
+    def test_seed_demo_creates_user_and_valid_entries(self):
+        from django.core.management import call_command
+        from django.test import override_settings
+
+        with override_settings(DEBUG=True):
+            call_command("seed_demo", "--user", "proov", "--months", "2", stdout=open("/dev/null", "w"))
+        entries = HeadacheEntry.objects.filter(user__username="proov")
+        self.assertTrue(entries.exists())
+        self.assertTrue(all(1 <= e.intensity <= 10 for e in entries))
