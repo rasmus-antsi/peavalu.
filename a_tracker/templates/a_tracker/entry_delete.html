@@ -1,19 +1,18 @@
 {% extends "base.html" %}
 
 {% block title %}Kustuta · Peavalu{% endblock %}
+{% block body_class %}page-center{% endblock %}
 
 {% block app %}
-<main class="app app--center">
-  <form method="post" class="glass confirm">
+<main class="center">
+  <form method="post" class="card glass confirm">
     {% csrf_token %}
-    <p class="muted">Kustuta kirje?</p>
-    <p class="confirm__date">{{ entry.date|date:"j. F Y" }}</p>
-    <p class="confirm__meta">Tugevus {{ entry.intensity }}/10{% if entry.duration_display %} · {{ entry.duration_display }}{% endif %}</p>
-    <div class="confirm__actions">
-      <a href="{% url 'entry_update' entry.pk %}" class="ghost-pill">Tühista</a>
-      <button type="submit" class="cta cta--danger">
-        <span class="cta__label">Kustuta</span>
-      </button>
+    <p class="eyebrow">Kustutan kirje?</p>
+    <h1 class="confirm__title">{{ entry.date|date:"j. F Y" }}</h1>
+    <p class="confirm__text">Tugevus {{ entry.intensity }}/10{% if entry.duration_display %} · {{ entry.duration_display }}{% endif %}. Seda ei saa tagasi võtta.</p>
+    <div class="sheet__actions">
+      <a href="{% url 'entry_update' entry.pk %}" class="btn btn--glass">Jäta alles</a>
+      <button type="submit" class="btn btn--danger">Kustuta</button>
     </div>
   </form>
 </main>
