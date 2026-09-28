@@ -7,4 +7,6 @@ urlpatterns = [
     path("uus/", views.entry_form, name="entry_create"),
     path("<int:pk>/", views.entry_form, name="entry_update"),
     path("<int:pk>/kustuta/", views.entry_delete, name="entry_delete"),
+    path("eksport/", views.export_form, name="export_form"),
+    path("eksport/pdf/", views.export_pdf, name="export_pdf"),
 ]

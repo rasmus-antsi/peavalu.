@@ -503,6 +503,7 @@
     else if (k === "arrowleft" || k === "h") click($('[data-month="prev"]', list));
     else if (k === "arrowright" || k === "l") click($('[data-month="next"]', list));
     else if (k === "t") click($(".wordmark", list));
+    else if (k === "e") click($("[data-export]", list));
     else if (k === "j" || k === "arrowdown") { e.preventDefault(); selectEntry(selected + 1); }
     else if (k === "k" || k === "arrowup") { e.preventDefault(); selectEntry(selected - 1); }
     else if (k === "enter" && selected >= 0) { e.preventDefault(); openEntrySheet($$(".entry", list)[selected].href); }

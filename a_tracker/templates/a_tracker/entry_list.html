@@ -17,6 +17,7 @@
       <summary class="icon-btn" aria-label="Menüü">{{ user.get_username|slice:":1"|upper }}</summary>
       <div class="menu__panel glass">
         <p class="menu__who">{{ user.get_username }}</p>
+        <a class="menu__item" href="{% url 'export_form' %}" data-export>PDF arstile <kbd class="only-fine">E</kbd></a>
         <button type="button" class="menu__item only-fine" data-dialog-open="keys">Kiirklahvid <kbd>?</kbd></button>
         {% if user.is_staff %}<a class="menu__item" href="{% url 'admin:index' %}" hx-boost="false">Andmete haldus</a>{% endif %}
         <form method="post" action="{% url 'logout' %}">

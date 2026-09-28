@@ -2,11 +2,13 @@ import datetime
 
 from django.contrib import messages
 from django.db.models import Count, Max
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from .forms import HeadacheEntryForm
+from .export import export_context, render_pdf
+from .forms import ExportRangeForm, HeadacheEntryForm
 from .models import INTENSITY_WORDS, HeadacheEntry
 from .summary import month_days, summarize
 
@@ -115,3 +117,34 @@ def entry_delete(request, pk):
         messages.success(request, "Kirje kustutatud")
         return redirect(_month_url(month))
     return render(request, "a_tracker/entry_delete.html", {"entry": entry})
+
+
+def _export_presets(today):
+    this_month = today.replace(day=1)
+    return [
+        ("See kuu", this_month, today),
+        ("3 kuud", _shift_month(this_month, -2), today),
+        ("6 kuud", _shift_month(this_month, -5), today),
+    ]
+
+
+def export_form(request, form=None):
+    today = timezone.localdate()
+    if form is None:
+        form = ExportRangeForm(initial={"alates": _shift_month(today.replace(day=1), -2), "kuni": today})
+    return render(request, "a_tracker/export_form.html", {
+        "form": form,
+        "presets": _export_presets(today),
+    })
+
+
+def export_pdf(request):
+    form = ExportRangeForm(request.GET)
+    if not form.is_valid():
+        return export_form(request, form)
+    start, end = form.cleaned_data["alates"], form.cleaned_data["kuni"]
+    pdf = render_pdf(export_context(request.user, start, end))
+    response = HttpResponse(pdf, content_type="application/pdf")
+    # inline: the phone opens it in its PDF viewer, with Share / Print / Save to Files
+    response["Content-Disposition"] = f'inline; filename="peavalu-{start:%Y-%m-%d}_{end:%Y-%m-%d}.pdf"'
+    return response
