@@ -1,4 +1,5 @@
 import datetime
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -101,6 +102,59 @@ class EntryTests(TestCase):
         entry = self.make_entry(self.user)
         self.client.post(reverse("entry_delete", args=[entry.pk]))
         self.assertFalse(HeadacheEntry.objects.exists())
+
+
+class ExportTests(TestCase):
+    def setUp(self):
+        # Keep tests offline: render with fallback fonts instead of fetching Fontshare's
+        patcher = mock.patch("a_tracker.export._fonts_css", return_value="")
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.user = User.objects.create_user("mari", password="salasona-123")
+        self.other = User.objects.create_user("teine", password="salasona-123")
+        self.client.force_login(self.user)
+
+    def pdf_url(self, start, end):
+        return f"{reverse('export_pdf')}?alates={start}&kuni={end}"
+
+    def test_export_pages_require_login(self):
+        self.client.logout()
+        for url in [reverse("export_form"), self.pdf_url("2026-09-01", "2026-09-30")]:
+            self.assertEqual(self.client.get(url).status_code, 302)
+
+    def test_export_form_offers_presets(self):
+        response = self.client.get(reverse("export_form"))
+        self.assertEqual([label for label, *_ in response.context["presets"]], ["See kuu", "3 kuud", "6 kuud"])
+
+    def test_pdf_contains_only_own_entries_in_range(self):
+        from .export import export_context
+
+        mine = HeadacheEntry.objects.create(user=self.user, date=datetime.date(2026, 9, 3), intensity=6, medication_name="Ibuprofeen")
+        HeadacheEntry.objects.create(user=self.user, date=datetime.date(2026, 10, 1), intensity=4)
+        HeadacheEntry.objects.create(user=self.other, date=datetime.date(2026, 9, 3), intensity=8)
+        context = export_context(self.user, datetime.date(2026, 8, 15), datetime.date(2026, 9, 30))
+        self.assertEqual(context["entries"], [mine])
+        self.assertEqual([m["month"] for m in context["months"]], [datetime.date(2026, 8, 1), datetime.date(2026, 9, 1)])
+        self.assertEqual(context["totals"]["med_days"], 1)
+        self.assertEqual(context["period_days"], 47)
+
+    def test_pdf_response(self):
+        HeadacheEntry.objects.create(user=self.user, date=datetime.date(2026, 9, 3), intensity=6, nausea=True)
+        response = self.client.get(self.pdf_url("2026-09-01", "2026-09-30"))
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn('filename="peavalu-2026-09-01_2026-09-30.pdf"', response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_empty_range_still_renders(self):
+        response = self.client.get(self.pdf_url("2020-01-01", "2020-01-31"))
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_bad_range_shows_form_errors(self):
+        for query in ["?alates=2026-09-30&kuni=2026-09-01", "?alates=x&kuni=", "?alates=2020-01-01&kuni=2026-01-01"]:
+            response = self.client.get(reverse("export_pdf") + query)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, "a_tracker/export_form.html")
+            self.assertFalse(response.context["form"].is_valid())
 
 
 class SeedDemoTests(TestCase):
