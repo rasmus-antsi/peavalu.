@@ -44,12 +44,15 @@ def _months_between(start, end):
         month = (month + datetime.timedelta(days=32)).replace(day=1)
 
 
-def _frequencies(entries, labels_of):
-    counts = Counter(label for e in entries for label in labels_of(e))
-    return [
-        {"label": label, "count": count, "share": count / len(entries)}
-        for label, count in counts.most_common()
-    ]
+def _frequencies(entries, labels_of, limit=None):
+    """How many headaches had each answer, most common first. `limit` keeps the
+    overview on one page; the diary pages still list every answer."""
+    counts = Counter(label for e in entries for label in labels_of(e)).most_common()
+    shown = counts[:limit] if limit else counts
+    return {
+        "rows": [{"label": label, "count": count} for label, count in shown],
+        "more": len(counts) - len(shown),
+    }
 
 
 def _medication_label(entry):
@@ -86,8 +89,8 @@ def export_context(user, start, end):
         "frequencies": [
             ("Valu iseloom", _frequencies(entries, lambda e: e.character_labels)),
             ("Kaasuvad tunnused", _frequencies(entries, lambda e: e.symptom_labels)),
-            ("Vallandav faktor", _frequencies(entries, lambda e: [e.trigger_factor] if e.trigger_factor else [])),
-            ("Ravim", _frequencies(entries, lambda e: _medication_label(e) if e.medication_name else [])),
+            ("Vallandav faktor", _frequencies(entries, lambda e: [e.trigger_factor] if e.trigger_factor else [], limit=6)),
+            ("Ravim", _frequencies(entries, lambda e: _medication_label(e) if e.medication_name else [], limit=6)),
         ] if entries else [],
         "intensity_scale": list(INTENSITY_WORDS.items()),
         "fonts_css": _fonts_css(),
