@@ -1,6 +1,4 @@
-import calendar
 import datetime
-from collections import Counter
 
 from django.contrib import messages
 from django.db.models import Count, Max
@@ -10,6 +8,7 @@ from django.utils import timezone
 
 from .forms import HeadacheEntryForm
 from .models import HeadacheEntry
+from .summary import month_days, summarize
 
 INTENSITY_WORDS = {
     1: "Vaevu tuntav", 2: "Kerge", 3: "Kerge", 4: "Mõõdukas", 5: "Mõõdukas",
@@ -43,28 +42,7 @@ def entry_list(request):
         HeadacheEntry.objects.filter(user=request.user, date__year=month.year, date__month=month.month)
     )
 
-    # Strongest headache per day drives the month rhythm strip and calendar.
-    peak_by_day, entry_by_day = {}, {}
-    for e in entries:
-        peak_by_day[e.date.day] = max(peak_by_day.get(e.date.day, 0), e.intensity)
-        entry_by_day.setdefault(e.date.day, e.pk)
-    days_in_month = calendar.monthrange(month.year, month.month)[1]
-    days = [
-        {
-            "day": d,
-            "date": month.replace(day=d),
-            "peak": peak_by_day.get(d),
-            "entry_id": entry_by_day.get(d),
-            "is_today": month.replace(day=d) == today,
-            "is_future": month.replace(day=d) > today,
-        }
-        for d in range(1, days_in_month + 1)
-    ]
-    leading_blanks = range(month.weekday())
-
-    symptom_counts = Counter(label for e in entries for label in e.symptom_labels)
-    rated = [e.was_effective for e in entries if e.was_effective is not None]
-
+    stats = summarize(entries)
     return render(request, "a_tracker/entry_list.html", {
         "entries": entries,
         "just_saved": request.GET.get("uus", ""),
@@ -72,13 +50,13 @@ def entry_list(request):
         "prev_month": _shift_month(month, -1),
         "next_month": _shift_month(month, 1) if _shift_month(month, 1) <= today else None,
         "is_current_month": month == today.replace(day=1),
-        "days": days,
-        "leading_blanks": leading_blanks,
-        "headache_days": len(peak_by_day),
-        "avg_intensity": sum(e.intensity for e in entries) / len(entries) if entries else None,
-        "top_symptoms": symptom_counts.most_common(3),
-        "med_helped": sum(rated),
-        "med_rated": len(rated),
+        "days": month_days(month, entries, today),
+        "leading_blanks": range(month.weekday()),
+        "headache_days": stats["headache_days"],
+        "avg_intensity": stats["avg_intensity"],
+        "top_symptoms": stats["symptom_counts"].most_common(3),
+        "med_helped": stats["med_helped"],
+        "med_rated": stats["med_rated"],
     })
 
 
