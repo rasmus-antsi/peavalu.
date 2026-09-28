@@ -1,41 +1,72 @@
 {% extends "base.html" %}
 
 {% block title %}PDF arstile · Peavalu{% endblock %}
-{% block body_class %}page-center{% endblock %}
+{% block body_class %}page-form{% endblock %}
 
 {% block app %}
-<main class="center">
-  <div class="card glass confirm export">
-    <a href="{% url 'entry_list' %}" class="icon-btn export__close" aria-label="Sulge">
+{# data-modal-src: the log fetches this block and shows it in the same sheet as the entry form #}
+<div class="form-page" data-modal-src>
+{# target=_blank: from the home-screen app the PDF opens in a viewer with Done, not a dead end #}
+<form method="get" action="{% url 'export_pdf' %}" target="_blank" class="shell shell--form shell--export"
+      hx-boost="false" novalidate data-export-form>
+
+  <header class="bar">
+    <a href="{% url 'entry_list' %}" class="icon-btn" aria-label="Sulge" data-form-close hx-boost="false">
       <svg class="icon"><use href="#i-close"/></svg>
     </a>
-    <p class="eyebrow">PDF arstile</p>
-    <h1 class="confirm__title">Milline periood?</h1>
-    <p class="confirm__text">Esimesel lehel on ülevaade, edasi iga peavalu kõigi vastustega.</p>
+    <p class="bar__title">PDF arstile</p>
+    <span class="icon-btn is-ghost" aria-hidden="true"></span>
+  </header>
 
-    {# The PDF is a file, not a page: never load it through htmx #}
-    <div class="chips export__presets">
-      {% for label, start, end in presets %}
-        <a class="chip" href="{% url 'export_pdf' %}?alates={{ start|date:'Y-m-d' }}&kuni={{ end|date:'Y-m-d' }}" hx-boost="false">{{ label }}</a>
-      {% endfor %}
-    </div>
+  <div class="export__body">
+    <h2 class="step__title" tabindex="-1">Milline periood?</h2>
 
-    <form method="get" action="{% url 'export_pdf' %}" class="export__range" hx-boost="false" novalidate>
-      <p class="group__label">Või vali ise</p>
-      <div class="export__dates">
-        <label class="field">
-          <span class="group__label">{{ form.alates.label }}</span>
-          <span class="input">{{ form.alates }}</span>
-        </label>
-        <label class="field">
-          <span class="group__label">{{ form.kuni.label }}</span>
-          <span class="input">{{ form.kuni }}</span>
-        </label>
+    <div class="card glass">
+      <div class="group">
+        <p class="group__label">Periood</p>
+        <div class="seg seg--export" role="radiogroup" aria-label="Periood">
+          {% for p in presets %}
+            <label class="seg__opt">
+              <input type="radio" name="periood" value="{{ p.key }}" data-start="{{ p.start|date:'Y-m-d' }}" data-end="{{ p.end|date:'Y-m-d' }}" data-count="{{ p.count }}"{% if form.periood.value == p.key %} checked{% endif %}>
+              {{ p.label }}
+            </label>
+          {% endfor %}
+          <label class="seg__opt">
+            <input type="radio" name="periood" value="muu"{% if form.periood.value == "muu" %} checked{% endif %}>
+            Muu
+          </label>
+        </div>
       </div>
-      {% for err in form.non_field_errors %}<p class="field__error">{{ err }}</p>{% endfor %}
-      {% if form.alates.errors or form.kuni.errors %}<p class="field__error">Vali mõlemad kuupäevad.</p>{% endif %}
-      <button type="submit" class="btn btn--primary btn--block">Loo PDF</button>
-    </form>
+
+      <div class="group">
+        <p class="group__label">Alates – kuni</p>
+        <div class="export__dates">
+          <label class="input"><span class="sr-only">Alates</span>{{ form.alates }}</label>
+          <label class="input"><span class="sr-only">Kuni</span>{{ form.kuni }}</label>
+        </div>
+        {% for err in form.non_field_errors %}<p class="field__error">{{ err }}</p>{% endfor %}
+        <p class="export__summary" data-export-summary>
+          {% for p in presets %}{% if form.periood.value == p.key %}{{ p.count }} peavalu{% endif %}{% endfor %}
+        </p>
+      </div>
+
+      <div class="group">
+        <p class="group__label">PDF-is</p>
+        <ul class="export__contents">
+          <li><b>Ülevaade</b><span>peavalu- ja ravimipäevad, kalender, sagedased tunnused</span></li>
+          <li><b>Päevik</b><span>iga peavalu kõigi vastustega, paberpäeviku järjekorras</span></li>
+        </ul>
+      </div>
+    </div>
   </div>
-</main>
+
+  <footer class="actions">
+    <button type="submit" class="btn btn--primary btn--save">
+      <svg class="icon"><use href="#i-arrow"/></svg>
+      <span>Loo PDF</span>
+      <kbd class="kbd">↵</kbd>
+    </button>
+  </footer>
+</form>
+</div>
 {% endblock %}
