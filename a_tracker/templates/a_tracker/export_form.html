@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}PDF arstile · Peavalu{% endblock %}
+{% block body_class %}page-center{% endblock %}
+
+{% block app %}
+<main class="center">
+  <div class="card glass confirm export">
+    <a href="{% url 'entry_list' %}" class="icon-btn export__close" aria-label="Sulge">
+      <svg class="icon"><use href="#i-close"/></svg>
+    </a>
+    <p class="eyebrow">PDF arstile</p>
+    <h1 class="confirm__title">Milline periood?</h1>
+    <p class="confirm__text">Esimesel lehel on ülevaade, edasi iga peavalu kõigi vastustega.</p>
+
+    {# The PDF is a file, not a page: never load it through htmx #}
+    <div class="chips export__presets">
+      {% for label, start, end in presets %}
+        <a class="chip" href="{% url 'export_pdf' %}?alates={{ start|date:'Y-m-d' }}&kuni={{ end|date:'Y-m-d' }}" hx-boost="false">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    <form method="get" action="{% url 'export_pdf' %}" class="export__range" hx-boost="false" novalidate>
+      <p class="group__label">Või vali ise</p>
+      <div class="export__dates">
+        <label class="field">
+          <span class="group__label">{{ form.alates.label }}</span>
+          <span class="input">{{ form.alates }}</span>
+        </label>
+        <label class="field">
+          <span class="group__label">{{ form.kuni.label }}</span>
+          <span class="input">{{ form.kuni }}</span>
+        </label>
+      </div>
+      {% for err in form.non_field_errors %}<p class="field__error">{{ err }}</p>{% endfor %}
+      {% if form.alates.errors or form.kuni.errors %}<p class="field__error">Vali mõlemad kuupäevad.</p>{% endif %}
+      <button type="submit" class="btn btn--primary btn--block">Loo PDF</button>
+    </form>
+  </div>
+</main>
+{% endblock %}

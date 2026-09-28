@@ -86,3 +86,20 @@ class HeadacheEntryForm(forms.ModelForm):
             if step["has_errors"]:
                 return step["slug"]
         return self.STEPS[0][0]
+
+
+class ExportRangeForm(forms.Form):
+    MAX_DAYS = 2 * 366
+
+    alates = forms.DateField(label="Alates", widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
+    kuni = forms.DateField(label="Kuni", widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
+
+    def clean(self):
+        cleaned = super().clean()
+        start, end = cleaned.get("alates"), cleaned.get("kuni")
+        if start and end:
+            if start > end:
+                raise forms.ValidationError("Algus peab olema enne lõppu.")
+            if (end - start).days > self.MAX_DAYS:
+                raise forms.ValidationError("Vali kuni kaheaastane periood.")
+        return cleaned

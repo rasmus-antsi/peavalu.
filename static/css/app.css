@@ -1333,6 +1333,14 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .confirm__title { font: var(--t-large); letter-spacing: var(--track-title); }
 .confirm__text { font: var(--t-body-long); color: var(--text-2); }
 
+/* PDF export page */
+.export { position: relative; }
+.export__close { position: absolute; top: var(--s-4); right: var(--s-4); }
+.export__presets { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: var(--s-5); }
+.export__range { display: flex; flex-direction: column; margin-top: var(--s-6); }
+.export__dates { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); margin-bottom: var(--s-4); }
+.export__range .field__error { margin: 0 var(--s-1) var(--s-4); }
+
 /* --------------------------------------------------------------------------
    Continuous (squircle) corners where supported — Apple's shape.
    Squircles read smaller than circular arcs at the same radius, so bump them.
