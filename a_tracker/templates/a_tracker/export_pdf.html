@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<title>Peavalupäevik · {{ user_name }} · {{ start|date:"d.m.Y" }}–{{ end|date:"d.m.Y" }}</title>
+<meta name="author" content="{{ user_name }}">
+<style>
+{{ fonts_css|safe }}
+
+/* Tokens copied from static/css/app.css so the PDF matches the app */
+:root {
+  --bg: oklch(97.4% .004 70);
+  --text-1: oklch(21% .008 55);
+  --text-2: oklch(45% .012 55);
+  --text-3: oklch(53.5% .012 55);
+  --line: oklch(21% .008 55 / .10);
+  --line-strong: oklch(21% .008 55 / .22);
+  --wash: oklch(21% .008 55 / .035);
+  --rose: oklch(60% .15 8);
+  --ok: oklch(48% .09 160);
+  --ok-wash: oklch(48% .09 160 / .12);
+  --danger: oklch(50% .16 22);
+  --danger-wash: oklch(50% .16 22 / .09);
+  --serif: "Sentient", Georgia, serif;
+  --sans: "Switzer", Helvetica, Arial, sans-serif;
+}
+[data-lvl="1"]  { --pain: oklch(94%   .030 8); --pain-ink: var(--text-1); }
+[data-lvl="2"]  { --pain: oklch(89.5% .055 8); --pain-ink: var(--text-1); }
+[data-lvl="3"]  { --pain: oklch(84.5% .075 8); --pain-ink: var(--text-1); }
+[data-lvl="4"]  { --pain: oklch(79%   .095 8); --pain-ink: var(--text-1); }
+[data-lvl="5"]  { --pain: oklch(73.5% .110 8); --pain-ink: var(--text-1); }
+[data-lvl="6"]  { --pain: oklch(68%   .125 8); --pain-ink: var(--text-1); }
+[data-lvl="7"]  { --pain: oklch(63%   .135 8); --pain-ink: var(--text-1); }
+[data-lvl="8"]  { --pain: oklch(55.5% .140 8); --pain-ink: white; }
+[data-lvl="9"]  { --pain: oklch(49%   .140 8); --pain-ink: white; }
+[data-lvl="10"] { --pain: oklch(43%   .132 8); --pain-ink: white; }
+
+/* ---- Pages ------------------------------------------------------------- */
+@page {
+  size: A4 portrait;
+  margin: 16mm 16mm 20mm;
+  @bottom-left { content: element(docinfo); }
+  @bottom-right {
+    content: "Lk " counter(page) " / " counter(pages);
+    font: 400 7.5pt var(--sans); color: var(--text-3);
+  }
+}
+@page diary {
+  size: A4 landscape;
+  margin: 13mm 14mm 24mm;
+  @bottom-left { content: element(scale); vertical-align: top; padding-top: 4mm; }
+}
+
+.docinfo { position: running(docinfo); font-size: 7.5pt; color: var(--text-3); }
+
+html { font: 400 9pt/1.4 var(--sans); color: var(--text-1); font-variant-numeric: tabular-nums; }
+body { margin: 0; }
+h1, h2, h3, p { margin: 0; }
+.eyebrow {
+  font: 500 7pt/1 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3);
+}
+.quiet { color: var(--text-3); }
+
+/* ---- Overview ---------------------------------------------------------- */
+.head { display: flex; align-items: center; gap: 5mm; padding-bottom: 6mm; border-bottom: .5pt solid var(--line-strong); }
+.head__logo { width: 15mm; height: 15mm; border-radius: 3.4mm; }
+.head__title { flex: 1; }
+.head__title h1 { font: 400 26pt/1 var(--serif); letter-spacing: -.02em; }
+.head__title h1 span { color: var(--rose); }
+.head__title p { margin-top: 2mm; font-size: 10pt; color: var(--text-2); }
+.head__meta { text-align: right; font-size: 8.5pt; line-height: 1.6; color: var(--text-2); }
+.head__meta b { font-weight: 500; color: var(--text-1); }
+
+.keys { display: flex; margin: 6mm 0 7mm; }
+.key { flex: 1; padding: 0 5mm; border-left: .5pt solid var(--line); }
+.key:first-child { padding-left: 0; border-left: 0; }
+.key__value { margin-top: 2.5mm; font: 400 24pt/1 var(--sans); letter-spacing: -.02em; }
+.key__value small { font-size: 11pt; color: var(--text-3); letter-spacing: 0; }
+.key__note { margin-top: 1.5mm; font-size: 7.5pt; color: var(--text-3); }
+
+section + section { margin-top: 6mm; }
+section > .eyebrow { display: block; margin-bottom: 3mm; break-after: avoid; }
+/* Rows of calendars / frequency groups may split across pages, one row at a time */
+.tiles { orphans: 1; widows: 1; }
+
+.months { width: 100%; border-collapse: collapse; }
+.months th, .months td { padding: 1.3mm 2mm; text-align: right; border-bottom: .5pt solid var(--line); }
+.months th { font: 500 7pt/1.2 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.months th:first-child, .months td:first-child { text-align: left; padding-left: 0; }
+.months td:first-child { font-weight: 500; }
+.months tfoot td { font-weight: 600; border-bottom: 0; border-top: .5pt solid var(--line-strong); }
+
+.cal { display: inline-block; vertical-align: top; width: 54mm; margin: 0 6.8mm 5mm 0; break-inside: avoid; }
+.cal:nth-child(3n) { margin-right: 0; }
+.cal__title { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2mm; }
+.cal__title h3 { font: 400 11pt/1 var(--serif); }
+.cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .8mm; }
+.cal__wd { font: 500 6pt/1 var(--sans); color: var(--text-3); text-align: center; padding-bottom: .8mm; }
+.cal__day {
+  height: 5.6mm; line-height: 5.6mm; text-align: center; font-size: 7pt; border-radius: 1.6mm;
+  color: var(--text-3); background: var(--wash);
+}
+.cal__day.is-outside { background: none; color: oklch(21% .008 55 / .2); }
+.cal__day[data-lvl] { background: var(--pain); color: var(--pain-ink); font-weight: 600; }
+
+.freq__group { display: inline-block; vertical-align: top; width: 84mm; margin: 0 8mm 5mm 0; break-inside: avoid; }
+.freq__group:nth-child(2n) { margin-right: 0; }
+.freq__group h3 { font: 500 8.5pt/1 var(--sans); margin-bottom: 2mm; }
+.freq__row { display: flex; align-items: center; gap: 2.5mm; padding: .6mm 0; font-size: 8.5pt; border-bottom: .5pt solid var(--line); }
+.freq__label { flex: 1; }
+.freq__bar { width: 22mm; height: 1.4mm; border-radius: 1mm; background: var(--wash); }
+.freq__bar span { display: block; height: 100%; border-radius: 1mm; background: var(--rose); }
+.freq__count { width: 12mm; text-align: right; color: var(--text-2); }
+
+.empty { margin-top: 12mm; font: 400 14pt/1.3 var(--serif); color: var(--text-2); }
+
+/* ---- Diary ------------------------------------------------------------- */
+.diary { page: diary; break-before: page; }
+.diary__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4mm; }
+.diary__head h2 { font: 400 16pt/1 var(--serif); letter-spacing: -.01em; }
+.diary__head p { font-size: 8pt; color: var(--text-3); }
+
+table.log { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.log thead { display: table-header-group; }
+.log th {
+  font: 500 6.8pt/1.2 var(--sans); letter-spacing: .05em; text-transform: uppercase; color: var(--text-3);
+  text-align: left; padding: 1.4mm 2mm; vertical-align: bottom;
+}
+.log th { border-bottom: .75pt solid var(--line-strong); }
+.log td { padding: 1.1mm 2mm; vertical-align: top; line-height: 1.3; border-bottom: .5pt solid var(--line); }
+.log tr { break-inside: avoid; }
+.log tbody tr.entry:nth-child(odd) td { background: var(--wash); }
+.log .month td {
+  padding: 3.5mm 2mm 1.2mm; background: none !important; border-bottom: .5pt solid var(--line-strong);
+  font: 400 11pt/1 var(--serif);
+}
+.log .month td span { margin-left: 2mm; font: 400 7.5pt/1 var(--sans); color: var(--text-3); }
+.log .month { break-after: avoid; }
+.log .date b { font-weight: 600; }
+.log .date span { margin-left: 1mm; color: var(--text-3); }
+.chip {
+  display: inline-block; min-width: 6.4mm; padding: 0 1.2mm; border-radius: 2mm; text-align: center;
+  font-weight: 600; line-height: 1.3; background: var(--pain); color: var(--pain-ink);
+}
+.log .other { font-style: italic; color: var(--text-2); }
+.effect { display: inline-block; padding: 0 1.6mm; border-radius: 2mm; font-size: 8pt; font-weight: 500; line-height: 1.45; }
+.nowrap { white-space: nowrap; }
+.effect--ok { background: var(--ok-wash); color: var(--ok); }
+.effect--no { background: var(--danger-wash); color: var(--danger); }
+
+/* Intensity scale in the diary pages' footer */
+.scale { position: running(scale); display: flex; align-items: center; gap: 3mm; font-size: 7pt; color: var(--text-3); }
+.scale__steps { display: flex; gap: .6mm; }
+.scale__step { width: 20mm; }
+.scale__step i { display: block; height: 2.2mm; border-radius: .8mm; background: var(--pain); }
+.scale__step span { display: block; margin-top: .8mm; white-space: nowrap; }
+.scale__step b { font-weight: 600; color: var(--text-2); margin-right: .8mm; }
+</style>
+</head>
+<body>
+<p class="docinfo">Peavalupäevik · {{ user_name }} · {{ start|date:"d.m.Y" }}–{{ end|date:"d.m.Y" }}</p>
+
+{# ---------------------------------------------------------------- Overview #}
+<header class="head">
+  <img class="head__logo" src="icons/icon-512.png" alt="">
+  <div class="head__title">
+    <h1>Peavalupäevik<span>.</span></h1>
+    <p>{{ start|date:"j. F Y" }} – {{ end|date:"j. F Y" }}</p>
+  </div>
+  <div class="head__meta">
+    <b>{{ user_name }}</b><br>
+    Koostatud {{ generated|date:"d.m.Y" }}
+  </div>
+</header>
+
+{% if entries %}
+  <div class="keys">
+    <div class="key">
+      <p class="eyebrow">Peavalu päevi</p>
+      <p class="key__value">{{ totals.headache_days }}<small> / {{ period_days }}</small></p>
+      <p class="key__note">{{ totals.count }} kirjet</p>
+    </div>
+    <div class="key">
+      <p class="eyebrow">Ravimiga päevi</p>
+      <p class="key__value">{{ totals.med_days }}</p>
+      <p class="key__note">päevad, mil võttis ravimit</p>
+    </div>
+    <div class="key">
+      <p class="eyebrow">Keskmine tugevus</p>
+      <p class="key__value">{{ totals.avg_intensity|floatformat:1 }}<small> / 10</small></p>
+      <p class="key__note">tugevaim {{ totals.max_intensity }} / 10</p>
+    </div>
+    <div class="key">
+      <p class="eyebrow">Ravi aitas</p>
+      <p class="key__value">{% if totals.med_rated %}{{ totals.med_helped }}<small> / {{ totals.med_rated }}</small>{% else %}—{% endif %}</p>
+      <p class="key__note">korral, kus mõju märgitud</p>
+    </div>
+  </div>
+
+  <section>
+    <span class="eyebrow">Kuude kaupa</span>
+    <table class="months">
+      <thead>
+        <tr><th>Kuu</th><th>Peavalu päevi</th><th>Ravimiga päevi</th><th>Keskmine</th><th>Tugevaim</th><th>Ravi aitas</th></tr>
+      </thead>
+      <tbody>
+        {% for m in months %}
+          <tr>
+            <td>{{ m.month|date:"F Y"|capfirst }}</td>
+            <td>{{ m.stats.headache_days }}</td>
+            <td>{{ m.stats.med_days }}</td>
+            <td>{% if m.stats.count %}{{ m.stats.avg_intensity|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td>{{ m.stats.max_intensity|default:"—" }}</td>
+            <td>{% if m.stats.med_rated %}{{ m.stats.med_helped }} / {{ m.stats.med_rated }}{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      {% if months|length > 1 %}
+        <tfoot>
+          <tr>
+            <td>Kokku</td>
+            <td>{{ totals.headache_days }}</td>
+            <td>{{ totals.med_days }}</td>
+            <td>{{ totals.avg_intensity|floatformat:1 }}</td>
+            <td>{{ totals.max_intensity }}</td>
+            <td>{% if totals.med_rated %}{{ totals.med_helped }} / {{ totals.med_rated }}{% else %}—{% endif %}</td>
+          </tr>
+        </tfoot>
+      {% endif %}
+    </table>
+  </section>
+
+  <section>
+    <span class="eyebrow">Kalender · värv ja number näitavad päeva tugevaimat peavalu</span>
+    <div class="tiles">{% spaceless %}
+      {% for m in months %}
+        <div class="cal">
+          <div class="cal__title">
+            <h3>{{ m.month|date:"F"|capfirst }}</h3>
+            <span class="quiet">{{ m.month|date:"Y" }}</span>
+          </div>
+          <div class="cal__grid">
+            {% for w in "ETKNRLP" %}<span class="cal__wd">{{ w }}</span>{% endfor %}
+            {% for _ in m.leading_blanks %}<span></span>{% endfor %}
+            {% for d in m.days %}
+              <span class="cal__day{% if d.is_outside %} is-outside{% endif %}"{% if d.peak %} data-lvl="{{ d.peak }}"{% endif %}>{% if d.peak %}{{ d.peak }}{% else %}{{ d.day }}{% endif %}</span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    {% endspaceless %}</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Kui sageli · mitmel peavalul {{ totals.count }}-st</span>
+    <div class="tiles">{% spaceless %}
+      {% for title, rows in frequencies %}
+        {% if rows %}
+          <div class="freq__group">
+            <h3>{{ title }}</h3>
+            {% for r in rows %}
+              <div class="freq__row">
+                <span class="freq__label">{{ r.label }}</span>
+                <span class="freq__bar"><span style="width: {% widthratio r.count totals.count 100 %}%"></span></span>
+                <span class="freq__count">{{ r.count }} / {{ totals.count }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% endspaceless %}</div>
+  </section>
+
+  {# ------------------------------------------------------------------ Diary #}
+  <div class="diary">
+    <div class="scale">
+      <span>Tugevus</span>
+      <div class="scale__steps">
+        {% for n, word in intensity_scale %}
+          <div class="scale__step" data-lvl="{{ n }}"><i></i><span><b>{{ n }}</b>{{ word }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="diary__head">
+      <h2>Päevik</h2>
+      <p>{{ start|date:"d.m.Y" }}–{{ end|date:"d.m.Y" }} · {{ user_name }}</p>
+    </div>
+
+    <table class="log">
+      <colgroup>
+        <col style="width: 17mm"><col style="width: 13mm"><col style="width: 16mm">
+        <col style="width: 40mm"><col style="width: 19mm">
+        <col><col style="width: 36mm">
+        <col style="width: 42mm"><col style="width: 22mm">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Kuupäev</th><th>Algus</th><th>Tugevus</th>
+          <th>Valu iseloom</th><th>Kestus</th>
+          <th>Kaasuvad tunnused</th><th>Vallandav faktor</th>
+          <th>Ravim ja kogus</th><th>Mõju</th>
+        </tr>
+      </thead>
+      {% for m in months %}
+        {% if m.entries %}
+          <tbody>
+            <tr class="month"><td colspan="9">{{ m.month|date:"F Y"|capfirst }}<span>{{ m.stats.headache_days }} peavalu päeva · {{ m.stats.med_days }} ravimiga</span></td></tr>
+            {% for e in m.entries %}
+              <tr class="entry">
+                <td class="date"><b>{{ e.date|date:"d.m" }}</b><span>{{ e.weekday_letter }}</span></td>
+                <td>{% if e.start_time %}{{ e.start_time|time:"H:i" }}{% else %}<span class="quiet">—</span>{% endif %}</td>
+                <td><span class="chip" data-lvl="{{ e.intensity }}">{{ e.intensity }}</span></td>
+                <td>{{ e.character_labels|join:", "|default:"—" }}</td>
+                <td>{{ e.duration_display|default:"—" }}</td>
+                <td>
+                  {{ e.symptom_labels|join:", " }}{% if e.symptom_labels and e.other_symptoms %}, {% endif %}{% if e.other_symptoms %}<span class="other">{{ e.other_symptoms }}</span>{% endif %}
+                  {% if not e.symptom_labels and not e.other_symptoms %}—{% endif %}
+                </td>
+                <td>{{ e.trigger_factor|default:"—" }}</td>
+                <td>{% if e.medication_name %}{{ e.medication_name }}{% if e.dose_mg %} <span class="nowrap">{{ e.dose_mg }} mg</span>{% endif %}{% else %}—{% endif %}</td>
+                <td>
+                  {% if e.was_effective is True %}<span class="effect effect--ok">aitas</span>
+                  {% elif e.was_effective is False %}<span class="effect effect--no">ei aidanud</span>
+                  {% else %}<span class="quiet">—</span>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        {% endif %}
+      {% endfor %}
+    </table>
+  </div>
+{% else %}
+  <p class="empty">Sel perioodil kirjeid pole.</p>
+{% endif %}
+
+</body>
+</html>
