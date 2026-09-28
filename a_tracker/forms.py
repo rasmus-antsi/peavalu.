@@ -91,7 +91,7 @@ class HeadacheEntryForm(forms.ModelForm):
 class ExportRangeForm(forms.Form):
     """A preset period, or any dates. Presets win, so the form also works without JavaScript."""
 
-    MAX_DAYS = 2 * 366
+    MAX_DAYS = 366   # a year keeps the overview on one page
     PRESETS = [("1", "See kuu", 0), ("3", "3 kuud", 2), ("6", "6 kuud", 5)]   # key, label, months back
 
     periood = forms.ChoiceField(choices=[(k, label) for k, label, _ in PRESETS] + [("muu", "Muu")], required=False)
@@ -120,5 +120,5 @@ class ExportRangeForm(forms.Form):
         if start > end:
             raise forms.ValidationError("Algus peab olema enne lõppu.")
         if (end - start).days > self.MAX_DAYS:
-            raise forms.ValidationError("Vali kuni kaheaastane periood.")
+            raise forms.ValidationError("Vali kuni aastane periood.")
         return cleaned
