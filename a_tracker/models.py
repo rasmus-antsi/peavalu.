@@ -3,6 +3,12 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
+INTENSITY_WORDS = {
+    1: "Vaevu tuntav", 2: "Kerge", 3: "Kerge", 4: "Mõõdukas", 5: "Mõõdukas",
+    6: "Tugev", 7: "Tugev", 8: "Väga tugev", 9: "Väga tugev", 10: "Talumatu",
+}
+
+
 class HeadacheEntry(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

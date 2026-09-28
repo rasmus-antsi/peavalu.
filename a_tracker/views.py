@@ -7,13 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .forms import HeadacheEntryForm
-from .models import HeadacheEntry
+from .models import INTENSITY_WORDS, HeadacheEntry
 from .summary import month_days, summarize
-
-INTENSITY_WORDS = {
-    1: "Vaevu tuntav", 2: "Kerge", 3: "Kerge", 4: "Mõõdukas", 5: "Mõõdukas",
-    6: "Tugev", 7: "Tugev", 8: "Väga tugev", 9: "Väga tugev", 10: "Talumatu",
-}
 
 
 def _month_from_request(request, today):
