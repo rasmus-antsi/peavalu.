@@ -27,7 +27,7 @@ The rules were simple:
 - **It has to work while it hurts.** Big tap targets, no typing required, and the most important answer (how strong is it?) comes first. Everything after that is optional.
 - **It has to be hers.** One small server, a login, and no analytics or third-party accounts. Her entries are visible to her and nobody else.
 - **It has to be something she wants to open.** Warm and calm rather than medical. It should feel like a well-made iPhone app, not a form.
-- **It has to give the doctor what they asked for.** Every field on the doctor's list is there, months of entries show patterns at a glance, and a PDF export she can hand over is coming next.
+- **It has to give the doctor what they asked for.** Every field on the doctor's list is there, months of entries show patterns at a glance, and a PDF she can hand over follows the paper diary's order and wording.
 
 It's a small, personal project. I'm sharing the code because the approach (a modern, app-like experience with almost no tooling) might be useful to someone building something similar for a person they care about.
 
@@ -41,8 +41,9 @@ It's a small, personal project. I'm sharing the code because the approach (a mod
 - **Learns her habits:** her most-used medications (with dose) and triggers become one-tap chips.
 - **Month view:** headache days, average intensity and how often treatment helped. There's a per-day rhythm strip on the phone and a colour-coded calendar on desktop.
 - **Feels like iOS:** the form opens as a sheet you pull down to dismiss, and the log behind scales back. If there are unsaved answers, it asks before discarding them. Steps can also be swiped.
+- **PDF for the doctor:** choose this month, the last 3 or 6 months, or any dates. The first page is an overview: headache days, days with medication, average intensity, a colour-coded calendar per month and how often each symptom, trigger and medication came up. After that comes every headache with every answer, in the paper diary's order. It opens in the phone's PDF viewer, ready to share or print.
 - **Every screen size:** iPhone first, then a two-pane layout on desktop that stretches sensibly all the way to an ultrawide monitor.
-- **Keyboard on desktop:** `N` new entry, `←`/`→` months, `J`/`K` move between entries, `1`–`0` set intensity, `Enter` next step, `⌘Enter` save, `Esc` close, `?` show all shortcuts.
+- **Keyboard on desktop:** `N` new entry, `E` PDF export, `←`/`→` months, `J`/`K` move between entries, `1`–`0` set intensity, `Enter` next step, `⌘Enter` save, `Esc` close, `?` show all shortcuts.
 - **Add to Home Screen** runs it full-screen, like an installed app.
 
 <p align="center">
@@ -67,6 +68,7 @@ There is no frontend build step at all. No npm, no bundler, no framework.
 | Navigation | [htmx](https://htmx.org) 2 (`hx-boost` + preload) with native View Transitions |
 | Styles | One hand-written CSS file (`static/css/app.css`) |
 | Behaviour | One small vanilla JS file (`static/js/app.js`) |
+| PDF | [WeasyPrint](https://weasyprint.org), rendering a normal Django template with print CSS |
 | Fonts | [Sentient](https://www.fontshare.com/fonts/sentient) + [Switzer](https://www.fontshare.com/fonts/switzer) from Fontshare |
 
 Everything is progressive enhancement: with JavaScript off, every page and form still works as plain HTML. The JavaScript adds the step flow, the sheet, the live intensity readout, one-tap fills and the keyboard shortcuts.
@@ -85,6 +87,7 @@ A few details I enjoyed getting right:
 ## Run it locally
 
 ```bash
+brew install pango                  # for the PDF export (WeasyPrint); on Debian/Ubuntu: apt install libpango-1.0-0 libpangoft2-1.0-0
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -108,7 +111,7 @@ python manage.py test
 There's no Procfile or config file. Railway's builder recognises a Django project and runs `migrate` and then gunicorn by itself.
 
 1. Create a service from the GitHub repo, and add a Postgres database to the project.
-2. In the service's Variables → Raw Editor, paste [`.env.example`](.env.example). Fill in `DJANGO_SECRET_KEY`, and set `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
+2. In the service's Variables → Raw Editor, paste [`.env.example`](.env.example). Fill in `DJANGO_SECRET_KEY`, and set `DATABASE_URL=${{Postgres.DATABASE_URL}}`. It also has `RAILPACK_DEPLOY_APT_PACKAGES`, which installs the system libraries the PDF export needs.
 3. Generate a domain and deploy.
 
 To create the login, run `railway ssh`, then `python manage.py createsuperuser`. Add further accounts from `/admin`.
@@ -127,12 +130,11 @@ Elsewhere, the same variables apply, plus `DJANGO_DEBUG=0` and your hostnames.
 
 - Every page requires login (`LoginRequiredMiddleware`), and every query is scoped to the logged-in user. The tests check that one account can't read another's entries.
 - There's no sign-up page, no analytics and no tracking. Accounts are created by the owner (`createsuperuser` or the admin).
-- The only third-party requests are the fonts (Fontshare) and htmx (jsDelivr). Self-host them if you want zero outside requests.
+- The only third-party requests are the fonts (Fontshare) and htmx (jsDelivr). Self-host them if you want zero outside requests. The PDF export fetches the same fonts from the server; no diary data leaves it.
 - The database is `.gitignore`d. Screenshots and seed data are generated.
 
 ## Roadmap
 
-- PDF export of a date range, to share with a doctor
 - Optional dark mode (light sensitivity is a real thing during a migraine)
 
 ## License
