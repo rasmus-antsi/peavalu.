@@ -124,7 +124,19 @@ class ExportTests(TestCase):
 
     def test_export_form_offers_presets(self):
         response = self.client.get(reverse("export_form"))
-        self.assertEqual([label for label, *_ in response.context["presets"]], ["See kuu", "3 kuud", "6 kuud"])
+        self.assertEqual([p["label"] for p in response.context["presets"]], ["See kuu", "3 kuud", "6 kuud"])
+
+    def test_preset_overrides_dates(self):
+        today = datetime.date(2026, 9, 28)
+        with mock.patch("django.utils.timezone.localdate", return_value=today):
+            response = self.client.get(reverse("export_pdf") + "?periood=3&alates=&kuni=")
+        self.assertIn('filename="peavalu-2026-07-01_2026-09-28.pdf"', response["Content-Disposition"])
+
+    def test_preset_range_crosses_the_year(self):
+        from .forms import ExportRangeForm
+
+        ranges = {k: (a, b) for k, _, a, b in ExportRangeForm.preset_ranges(datetime.date(2027, 2, 10))}
+        self.assertEqual(ranges["6"], (datetime.date(2026, 9, 1), datetime.date(2027, 2, 10)))
 
     def test_pdf_contains_only_own_entries_in_range(self):
         from .export import export_context
@@ -150,7 +162,7 @@ class ExportTests(TestCase):
         self.assertTrue(response.content.startswith(b"%PDF"))
 
     def test_bad_range_shows_form_errors(self):
-        for query in ["?alates=2026-09-30&kuni=2026-09-01", "?alates=x&kuni=", "?alates=2020-01-01&kuni=2026-01-01"]:
+        for query in ["?alates=2026-09-30&kuni=2026-09-01", "?alates=x&kuni=", "?periood=muu&alates=", "?alates=2020-01-01&kuni=2026-01-01"]:
             response = self.client.get(reverse("export_pdf") + query)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, "a_tracker/export_form.html")

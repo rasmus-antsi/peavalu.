@@ -89,17 +89,36 @@ class HeadacheEntryForm(forms.ModelForm):
 
 
 class ExportRangeForm(forms.Form):
-    MAX_DAYS = 2 * 366
+    """A preset period, or any dates. Presets win, so the form also works without JavaScript."""
 
-    alates = forms.DateField(label="Alates", widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
-    kuni = forms.DateField(label="Kuni", widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
+    MAX_DAYS = 2 * 366
+    PRESETS = [("1", "See kuu", 0), ("3", "3 kuud", 2), ("6", "6 kuud", 5)]   # key, label, months back
+
+    periood = forms.ChoiceField(choices=[(k, label) for k, label, _ in PRESETS] + [("muu", "Muu")], required=False)
+    alates = forms.DateField(required=False, widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
+    kuni = forms.DateField(required=False, widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
+
+    def __init__(self, *args, today, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.today = today
+
+    @staticmethod
+    def preset_ranges(today):
+        first = today.replace(day=1)
+        for key, label, back in ExportRangeForm.PRESETS:
+            index = first.year * 12 + first.month - 1 - back
+            yield key, label, first.replace(year=index // 12, month=index % 12 + 1), today
 
     def clean(self):
         cleaned = super().clean()
+        preset = {key: (start, end) for key, _, start, end in self.preset_ranges(self.today)}.get(cleaned.get("periood"))
+        if preset:
+            cleaned["alates"], cleaned["kuni"] = preset
         start, end = cleaned.get("alates"), cleaned.get("kuni")
-        if start and end:
-            if start > end:
-                raise forms.ValidationError("Algus peab olema enne lõppu.")
-            if (end - start).days > self.MAX_DAYS:
-                raise forms.ValidationError("Vali kuni kaheaastane periood.")
+        if not (start and end):
+            raise forms.ValidationError("Vali mõlemad kuupäevad.")
+        if start > end:
+            raise forms.ValidationError("Algus peab olema enne lõppu.")
+        if (end - start).days > self.MAX_DAYS:
+            raise forms.ValidationError("Vali kuni kaheaastane periood.")
         return cleaned

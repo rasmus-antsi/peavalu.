@@ -119,27 +119,22 @@ def entry_delete(request, pk):
     return render(request, "a_tracker/entry_delete.html", {"entry": entry})
 
 
-def _export_presets(today):
-    this_month = today.replace(day=1)
-    return [
-        ("See kuu", this_month, today),
-        ("3 kuud", _shift_month(this_month, -2), today),
-        ("6 kuud", _shift_month(this_month, -5), today),
-    ]
-
-
 def export_form(request, form=None):
     today = timezone.localdate()
     if form is None:
-        form = ExportRangeForm(initial={"alates": _shift_month(today.replace(day=1), -2), "kuni": today})
-    return render(request, "a_tracker/export_form.html", {
-        "form": form,
-        "presets": _export_presets(today),
-    })
+        three = next(r for r in ExportRangeForm.preset_ranges(today) if r[0] == "3")
+        form = ExportRangeForm(initial={"periood": "3", "alates": three[2], "kuni": three[3]}, today=today)
+    entries = HeadacheEntry.objects.filter(user=request.user)
+    presets = [
+        {"key": key, "label": label, "start": start, "end": end,
+         "count": entries.filter(date__range=(start, end)).count()}
+        for key, label, start, end in ExportRangeForm.preset_ranges(today)
+    ]
+    return render(request, "a_tracker/export_form.html", {"form": form, "presets": presets})
 
 
 def export_pdf(request):
-    form = ExportRangeForm(request.GET)
+    form = ExportRangeForm(request.GET, today=timezone.localdate())
     if not form.is_valid():
         return export_form(request, form)
     start, end = form.cleaned_data["alates"], form.cleaned_data["kuni"]

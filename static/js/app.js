@@ -295,6 +295,7 @@
 
   async function openEntrySheet(url) {
     if (topDialog()) return;
+    $$("details.menu[open]").forEach((d) => { d.open = false; });
     let text;
     try { text = await load(url); } catch { navigate(url); return; }
     cache.delete(url);   // fresh next time (csrf token, suggestions)
@@ -304,12 +305,12 @@
 
     const dialog = document.createElement("dialog");
     dialog.className = "sheet entry-modal";
-    dialog.setAttribute("aria-label", "Peavalu kirje");
+    dialog.setAttribute("aria-label", $(".bar__title", src)?.textContent.trim() || "Peavalu kirje");
     dialog.append(...src.childNodes);
     document.body.append(dialog);
     window.htmx?.process(dialog);       // the form submits through htmx like everything else
 
-    const form = $("[data-entry-form]", dialog);
+    const form = $("[data-entry-form], [data-export-form]", dialog);
     form.classList.add("is-modal");
 
     // One way out on phones: the sheet continues down from wherever it is
@@ -339,7 +340,9 @@
     // Esc: ask first if there are answers
     dialog.addEventListener("cancel", (e) => { e.preventDefault(); sheetCtl?.requestClose(); });
 
-    const ctl = initEntryForm(form, { onClose: close });
+    const ctl = form.matches("[data-entry-form]")
+      ? initEntryForm(form, { onClose: close })
+      : initExportForm(form, { onClose: close });
     sheetCtl = ctl;
 
     dialog.showModal();
@@ -394,6 +397,37 @@
     handle.addEventListener("pointercancel", end);
   }
 
+  /* ------------------------------------------------------------ PDF export */
+
+  /* Presets fill the dates; touching a date switches to "Muu". The PDF opens
+     in a new tab/viewer, so the sheet closes behind it. */
+  function initExportForm(form, { onClose } = {}) {
+    const radios = $$('input[name="periood"]', form);
+    const dates = $$('input[type="date"]', form);
+    const summary = $("[data-export-summary]", form);
+    const show = () => {
+      const r = radios.find((x) => x.checked);
+      summary.textContent = r?.dataset.count ? `${r.dataset.count} peavalu` : "";
+    };
+    radios.forEach((r) => r.addEventListener("change", () => {
+      if (r.dataset.start) [dates[0].value, dates[1].value] = [r.dataset.start, r.dataset.end];
+      show();
+    }));
+    dates.forEach((d) => d.addEventListener("input", () => {
+      radios.find((x) => x.value === "muu").checked = true;
+      show();
+    }));
+
+    const closeLink = $("[data-form-close]", form);
+    const requestClose = async () => {
+      if (onClose) onClose(); else navigate(closeLink.href);
+      return true;
+    };
+    closeLink.addEventListener("click", (e) => { e.preventDefault(); requestClose(); });
+    form.addEventListener("submit", () => { if (onClose) setTimeout(onClose, 300); });
+    return { form, requestClose, destroy() {} };
+  }
+
   /* ---------------------------------------------------------- page setup */
 
   let pageFormCtl = null;
@@ -415,6 +449,8 @@
 
     const pageForm = $("#page [data-entry-form]");
     if (pageForm) pageFormCtl = formCtl = initEntryForm(pageForm);
+    const exportForm = $("#page [data-export-form]");
+    if (exportForm) initExportForm(exportForm);
 
     const toggle = $("[data-password-toggle]");
     if (toggle) {
@@ -443,9 +479,10 @@
     $$("dialog[open]").forEach((d) => d.close());
   });
 
-  /* Log: entries and the add button open the sheet instead of a new page */
+  /* Log: entries, the add button and the PDF export open a sheet instead of a new page */
+  const SHEET_LINKS = ".shell--list a.add, .shell--list a.entry, .shell--list a[data-export]";
   document.addEventListener("click", (e) => {
-    const link = e.target.closest(".shell--list a.add, .shell--list a.entry");
+    const link = e.target.closest(SHEET_LINKS);
     if (!link || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     e.stopPropagation();          // keep htmx's boost from also navigating
@@ -454,7 +491,7 @@
 
   // Warm the cache on hover / first touch so the sheet opens instantly
   const warm = (e) => {
-    const link = e.target.closest?.(".shell--list a.add, .shell--list a.entry");
+    const link = e.target.closest?.(SHEET_LINKS);
     if (link) load(link.href).catch(() => {});
   };
   document.addEventListener("pointerover", warm);
@@ -489,6 +526,14 @@
         e.preventDefault();
         f.setPain(e.key === "0" ? 10 : +e.key);
       }
+      return;
+    }
+
+    // PDF sheet: Enter creates the PDF, like "Loo PDF ↵" promises
+    const exportForm = topDialog()?.querySelector("[data-export-form]") || $("#page [data-export-form]");
+    if (exportForm && e.key === "Enter" && !mod && !e.target.closest("button, a")) {
+      e.preventDefault();
+      exportForm.requestSubmit();
       return;
     }
 
